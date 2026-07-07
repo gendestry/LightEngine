@@ -1,0 +1,6 @@
+cmake_build_debug/
+.idea/
+old/
+build/
+.claude
+lib/*

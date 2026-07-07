@@ -1,0 +1,22 @@
+NUM = ([1-9][0-9]* | '0')
+!WHITESPACE = (' ' | \n)+
+
+# ---- verbs (keywords) ----
+STORE  = 'Store'
+DELETE = 'Delete'
+
+# ---- object types (keywords) ----
+FIXTURE = 'Fixture'
+GROUP   = 'Group'
+COLOR   = 'Color'
+CUE     = 'Cue'
+PRESET  = 'Preset'
+
+# ---- selection keywords ----
+THRU = 'Thru'
+FULL = 'Full'
+
+# ---- operators (symbols) ----
+PLUS  = '+'
+MINUS = '-'
+AT    = '@'
