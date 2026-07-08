@@ -131,42 +131,33 @@ bool Fixture::Has(GDTF::Attribute attr) const
     return m_byAttribute.find(attr) != m_byAttribute.end();
 }
 
-void Fixture::Set(GDTF::Attribute attr, float value)
-{
-    auto it = m_byAttribute.find(attr);
-    if (it == m_byAttribute.end())
-    {
-        return;
-    }
-    for (Parameter *p : it->second)
-    {
-        p->Write(value);
-    }
-}
-
-void Fixture::SetColor(const Utils::Colors::HSV &hsv)
-{
-    for (ColorCell &cell : m_colorCells)
-    {
-        cell.SetColor(hsv);
-    }
-}
-
-void Fixture::SetIntensity(float v)
-{
-    for (ColorCell &cell : m_colorCells)
-    {
-        cell.SetIntensity(v);
-    }
-}
-
 ColorCell &Fixture::Cell(std::size_t index) { return m_colorCells[index]; }
 
-void Fixture::Resolve()
+void Fixture::Resolve(const Engine::FixtureValues &values)
 {
-    for (ColorCell &cell : m_colorCells)
+    // color cells (HSV -> RGB + virtual dimmer). Only touched if a layer
+    // contributed a color; otherwise the cells stay at the frame's blackout.
+    if (values.color)
     {
-        cell.Resolve();
+        for (ColorCell &cell : m_colorCells)
+        {
+            cell.SetColor(*values.color);
+            cell.Resolve();
+        }
+    }
+
+    // generic attributes (pan, tilt, gobo, ...)
+    for (const auto &[attr, value] : values.generic)
+    {
+        auto it = m_byAttribute.find(attr);
+        if (it == m_byAttribute.end())
+        {
+            continue;
+        }
+        for (Parameter *p : it->second)
+        {
+            p->Write(value);
+        }
     }
 }
 } // namespace LightEngine::Fixtures

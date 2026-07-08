@@ -6,6 +6,7 @@
 
 #include "LightEngine/DMX/FixtureGroup.h"
 #include "LightEngine/DMX/Universe.h"
+#include "LightEngine/Engine/Engine.h"
 #include "LightEngine/Fixture/Fixture.h"
 #include "LightEngine/GDTF/LogicalChannel.h"
 #include "Utils/Colors/Colors.h"
@@ -117,51 +118,35 @@ static Fixture MakeDimmerRGB()
 
 int main()
 {
-    DMX::Universe universe(1);
+    Engine::Engine engine;
 
-    // 10 RGB fixtures (3 channels each) then 5 DimmerRGB (4 channels each)
-    Fixture rgbDef = MakeRGB();
-    Fixture dimDef = MakeDimmerRGB();
+    // 10 RGB fixtures (3 channels each) then 5 DimmerRGB (4 channels each),
+    // all patched into universe 1.
+    auto rgbFids = engine.patch(MakeRGB(), 1, 10);
+    auto dimFids = engine.patch(MakeDimmerRGB(), 1, 5);
 
-    std::vector<std::shared_ptr<Fixture>> rgbFixtures;
-    for (int i = 0; i < 10; ++i)
-    {
-        rgbFixtures.push_back(universe.addFixture(rgbDef));
-    }
+    // groups: 1 = the RGBs, 2 = the DimmerRGBs, 3 = all of them
+    engine.addToGroup("rgb", rgbFids);
+    engine.addToGroup("dimmer", dimFids);
+    engine.addToGroup("all", rgbFids);
+    engine.addToGroup("all", dimFids);
 
-    std::vector<std::shared_ptr<Fixture>> dimFixtures;
-    for (int i = 0; i < 5; ++i)
-    {
-        dimFixtures.push_back(universe.addFixture(dimDef));
-    }
+    // all editing goes through the programmer layer now (fixtures/groups hold
+    // no state; the programmer does).
+    auto &prog = engine.programmer();
 
-    // groups
-    DMX::FixtureGroup g1("rgb");
-    g1.add(rgbFixtures);
-    DMX::FixtureGroup g2("dimmer");
-    g2.add(dimFixtures);
-    DMX::FixtureGroup g3("all");
-    g3.add(g1);
-    g3.add(g2);
+    // colors: group 1 green, group 2 blue
+    prog.select(*engine.getGroup("rgb"));
+    prog.setColor(Utils::Colors::HSV(120.f, 1.f, 1.f));
+    prog.select(*engine.getGroup("dimmer"));
+    prog.setColor(Utils::Colors::HSV(240.f, 1.f, 1.f));
 
-    // colors: group 1 green, group 2 blue (full value for now)
-    g1.setColor(Utils::Colors::HSV(120.f, 1.f, 1.f));
-    g2.setColor(Utils::Colors::HSV(240.f, 1.f, 1.f));
+    // group 3: intensity ramp 0..1 across every fixture (V overrides the 1.0)
+    prog.select(*engine.getGroup("all"));
+    prog.setIntensityRamp(0.f, 1.f);
 
-    // group 2 dimmer to 50% (intensity is normalized 0..1 -> DMX ~128)
-    // g2.setIntensity(0.5f);
-
-    // // group 3: intensity ramp 0..1 across every fixture (V overrides
-    const auto &all = g3.fixtures();
-    for (std::size_t i = 0; i < all.size(); ++i)
-    {
-        float t = all.size() <= 1 ? 0.f : float(i) / float(all.size() - 1);
-        all[i]->SetIntensity(t);
-    }
-
-    // // push all color-cell state into the buffer, then print
-    g3.resolve();
-
-    printUniverse(universe, 64);
+    // run one frame (blackout -> compose layers -> resolve), then print it
+    engine.update();
+    printUniverse(*engine.getUniverse(1), 64);
     return 0;
 }

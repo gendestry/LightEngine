@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "LightEngine/Engine/Frame.h"
 #include "LightEngine/Fixture/ColorCell.h"
 #include "LightEngine/Fixture/Parameter.h"
 #include "LightEngine/GDTF/LogicalChannel.h"
@@ -62,17 +63,16 @@ public:
 
     // ---- generic attribute access (pan, tilt, gobo, ...) ----
     bool Has(GDTF::Attribute attr) const;
-    void Set(GDTF::Attribute attr, float value);
 
     // ---- color path (per emitter, HSV + virtual dimmer) ----
-    void SetColor(const Utils::Colors::HSV &hsv); // broadcast to all cells
-    void SetIntensity(float v);                   // V on all color cells
     ColorCell &Cell(std::size_t index);
     std::vector<ColorCell> &ColorCells() { return m_colorCells; }
     std::size_t CellCount() const { return m_colorCells.size(); }
 
-    // ---- frame resolve: push color-cell HSV state into the buffer ----
-    void Resolve();
+    // ---- frame resolve: write this frame's merged values into the buffer ----
+    // Fixtures are stateless sinks: they keep nothing between frames, they just
+    // render whatever the compositor hands them.
+    void Resolve(const Engine::FixtureValues &values);
 
     // ---- identity ----
     const std::string &Name() const { return m_name; }

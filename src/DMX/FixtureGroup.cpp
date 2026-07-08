@@ -94,34 +94,6 @@ const std::vector<Fixtures::ColorCell *> &FixtureGroup::colorCells() const
     return m_colorCells;
 }
 
-void FixtureGroup::setColor(const Utils::Colors::HSV &hsv)
-{
-    for (const auto &f : m_fixtures)
-    {
-        f->SetColor(hsv);
-    }
-}
-
-void FixtureGroup::setColor(const Utils::Colors::RGB &rgb)
-{
-    setColor(Utils::Colors::rgbToHsv(rgb));
-}
-
-void FixtureGroup::setIntensity(float v)
-{
-    for (const auto &f : m_fixtures)
-    {
-        f->SetIntensity(v);
-    }
-}
-
-void FixtureGroup::resolve()
-{
-    for (const auto &f : m_fixtures)
-    {
-        f->Resolve();
-    }
-}
 
 FixtureGroup &FixtureGroup::operator+=(const FixturePtr &fixture)
 {

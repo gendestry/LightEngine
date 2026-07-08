@@ -32,7 +32,8 @@ class FixtureGroup
 
     // caches, rebuilt lazily from m_fixtures (pointers into the fixtures,
     // stable because the fixtures are held by shared_ptr).
-    mutable std::map<GDTF::Attribute, std::vector<Fixtures::Parameter *>> m_byAttribute;
+    mutable std::map<GDTF::Attribute, std::vector<Fixtures::Parameter *>>
+        m_byAttribute;
     mutable std::vector<Fixtures::ColorCell *> m_colorCells;
     mutable bool m_cacheDirty = true;
 
@@ -51,11 +52,17 @@ public:
     [[nodiscard]] const std::string &name() const { return m_name; }
     void setName(std::string name) { m_name = std::move(name); }
 
-    [[nodiscard]] const std::vector<FixturePtr> &fixtures() const { return m_fixtures; }
+    [[nodiscard]] const std::vector<FixturePtr> &fixtures() const
+    {
+        return m_fixtures;
+    }
     [[nodiscard]] std::size_t size() const { return m_fixtures.size(); }
     [[nodiscard]] bool empty() const { return m_fixtures.empty(); }
     [[nodiscard]] bool contains(const FixturePtr &fixture) const;
-    [[nodiscard]] const std::set<uint16_t> &usedUniverses() const { return m_usedUniverses; }
+    [[nodiscard]] const std::set<uint16_t> &usedUniverses() const
+    {
+        return m_usedUniverses;
+    }
 
     // Every parameter of an attribute across all members (cached).
     [[nodiscard]] const std::vector<Fixtures::Parameter *> &
@@ -65,11 +72,8 @@ public:
     // Flattened, ordered color cells across all members - the gradient target.
     [[nodiscard]] const std::vector<Fixtures::ColorCell *> &colorCells() const;
 
-    // ---- convenience: apply to the whole group ----
-    void setColor(const Utils::Colors::HSV &hsv);
-    void setColor(const Utils::Colors::RGB &rgb); // convenience: converts to HSV
-    void setIntensity(float v);
-    void resolve(); // push each fixture's color-cell state to its buffer
+    // NOTE: a FixtureGroup is a pure selection now - it holds no values. To
+    // drive it, hand it to ProgrammerLayer::select() and set values there.
 
     FixtureGroup &operator+=(const FixturePtr &fixture);
     FixtureGroup &operator+=(const FixtureGroup &other);

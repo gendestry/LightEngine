@@ -165,9 +165,13 @@ package "Engine" #F7F7FF {
   class FixtureLibrary <<todo>> {
     load(gdtf) / get(name)
   }
-  class Patch <<todo>> {
+  class Patch <<done>> {
     fixtures : map_FID_Fixture
-    patch() / getFixture()
+    universes : map
+    dirty : set
+    patch(template, uni, amount)
+    getFixture(fid) / getFixtures(fids)
+    blackout()
   }
   class Programmer <<todo>> {
     select() / setColor()
@@ -177,8 +181,10 @@ package "Engine" #F7F7FF {
   class Values <<todo>> {
     color / intensity
   }
-  class Engine <<todo>> {
-    update()
+  class Engine <<done>> {
+    patch() / group() / addToGroup()
+    getFixture() / getUniverse()
+    update() : blackout then resolve
   }
   Patch *-- FixtureLibrary
   Patch *-- "many" Universe
@@ -227,13 +233,15 @@ note as N1
   DONE: GDTF channel data (DMXChannel /
   LogicalChannel / ChannelFunction),
   Parameter, ColorCell, Fixture, Universe,
-  FixtureGroup. Demo patches, groups,
-  colors + intensity, prints universe.
+  FixtureGroup, Patch, Engine (non-tracking
+  blackout -> resolve frame). Demo patches,
+  groups, colors + intensity, prints universe.
   ----
-  NEXT: full GDTF import (FixtureType,
-  Geometry/DMXMode/ChannelSet), Patch +
-  Engine frame loop, Programmer + gradient,
-  Effects, Cue/Sequence, sACN output.
+  NEXT: TimeContext + real frame loop, then
+  Programmer + gradient over colorCells();
+  Effects, Cue/Sequence; FixtureLibrary +
+  loadGDTF (FixtureType/Geometry/DMXMode/
+  ChannelSet); sACN output.
 end note
 
 @enduml
