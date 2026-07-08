@@ -1,0 +1,315 @@
+@startuml LightEngine
+' LightEngine architecture.
+' Layer 1: a GDTF-faithful Definition that import maps onto 1:1.
+' Layer 2: a runtime layer with a small semantic API (Type/Field) plus cells
+' for individual (per-pixel) control. vdim and HSV live only in the runtime.
+' NOTE: PlantUML only treats ' as a comment at the START of a line.
+
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam nodesep 30
+skinparam ranksep 45
+hide empty members
+
+' ============================================================
+' Layer 1 - GDTF-faithful definition (import target, shared)
+' ============================================================
+package "Definition (GDTF FixtureType)" #F4F9FF {
+
+  class FixtureType {
+    name : string
+    manufacturer : string
+  }
+
+  enum GdtfAttribute {
+    Dimmer
+    ColorAdd_R
+    ColorAdd_G
+    ColorAdd_B
+    ColorAdd_W
+    Pan
+    Tilt
+    Zoom
+    Shutter1
+  }
+
+  class Feature {
+    name : string
+  }
+
+  class Geometry {
+    name : string
+  }
+  class GeometryReference {
+    name : string
+    position
+    dmxOffset
+  }
+
+  class DMXMode {
+    name : string
+    footprint : uint16
+  }
+  class DMXChannel {
+    offset : bytes
+    geometry : ref
+  }
+  class LogicalChannel {
+    attribute : ref
+    snap
+    master
+  }
+  class ChannelFunction {
+    name : string
+    dmxFrom : uint
+    physicalFrom : float
+    physicalTo : float
+    Evaluate(dmx) : float
+  }
+  class ChannelSet {
+    name : string
+    dmxFrom : uint
+    dmxTo : uint
+  }
+
+  FixtureType *-- GdtfAttribute
+  FixtureType *-- Feature
+  FixtureType *-- Geometry
+  FixtureType *-- DMXMode
+  GdtfAttribute --> Feature
+
+  DMXMode "1" *-- "many" DMXChannel
+  DMXChannel "1" *-- "1..*" LogicalChannel
+  LogicalChannel "1" *-- "1..*" ChannelFunction
+  ChannelFunction "1" *-- "many" ChannelSet
+  LogicalChannel --> GdtfAttribute
+  DMXChannel --> Geometry
+  Geometry "1" o-- "many" GeometryReference
+}
+
+note as N1
+  GDTF has NO Cell node.
+  A cell/pixel = one GeometryReference:
+  the referenced Geometry's DMXChannels are
+  duplicated at each reference offset. The
+  runtime ColorCell is built by EXPANDING
+  these references.
+  ----
+  demo main.cpp is a flattened form:
+  demo DMXChannel      = GDTF offset + width
+  demo LogicalChannel  = GDTF DMXChannel + LogicalChannel (MERGED)
+  demo ChannelFunction = GDTF ChannelFunction (no ChannelSet yet)
+  demo Cell            = runtime only (from GeometryReference)
+end note
+GeometryReference .. N1
+
+' ============================================================
+' Classification - GDTF attribute to engine capability
+' ============================================================
+package "Classification" #FFF7EE {
+  enum Type {
+    NONE
+    DIMMER
+    COLOR
+    POSITION
+    BEAM
+    VDIMMER
+  }
+  enum Field {
+    R
+    G
+    B
+    W
+    PAN
+    TILT
+    DIMMER
+    ZOOM
+  }
+  class Classifier {
+    classify(GdtfAttribute) : Type_Field
+  }
+  Classifier ..> GdtfAttribute
+  Classifier ..> Type
+  Classifier ..> Field
+}
+
+' ============================================================
+' Runtime - live objects wired to a universe buffer
+' ============================================================
+package "Runtime" #F3FFF3 {
+
+  class Parameter {
+    desc : Descriptor
+    bytes : ptr
+    baseOffset : uint32
+    setChannel(Field, norm)
+    getChannel(Field) : opt
+    has(Field) : bool
+  }
+
+  class VDimmer {
+    color : Parameter
+    level : float
+    bind(Parameter)
+    apply()
+  }
+  VDimmer --|> Parameter
+
+  class ColorCell {
+    name : string
+    vdim : float
+    setColor(HSV)
+    setVDim(float)
+  }
+  ColorCell o-- "1..*" Parameter
+
+  class Fixture {
+    fid : uint16
+    universe : uint16
+    setColor(HSV)
+    setIntensity(float)
+    cell(i) : ColorCell
+    colorCells() : list
+    ensureVirtualDimmer()
+    applyVirtualDimmers()
+  }
+  Fixture "1" *-- "many" Parameter
+  Fixture "1" *-- "many" ColorCell
+  Fixture "1" o-- "0..*" VDimmer
+
+  Parameter ..> Type
+  Parameter ..> Field
+}
+
+' ============================================================
+' DMX plumbing
+' ============================================================
+package "DMX" #FFF3FB {
+  class Universe {
+    id : uint16
+    buffer : bytes512
+    addFixture(def, start) : Fixture
+    blackout()
+    buffer() : bytes
+  }
+  class FixtureGroup {
+    name : string
+    setColor(HSV)
+    setIntensity(float)
+    parameters(Type) : list
+    colorCells() : list
+  }
+  Universe "1" o-- "many" Fixture
+  FixtureGroup o-- "many" Fixture
+  FixtureGroup ..> ColorCell
+}
+
+' ============================================================
+' Engine components
+' ============================================================
+package "Engine" #F7F7FF {
+  class FixtureLibrary {
+    load(gdtf) : Definition
+    get(name) : Definition
+  }
+  class Patch {
+    fixtures : map_FID_Fixture
+    dirty : set
+    patch(name, universe, amount) : fids
+    getFixture(FID) : Fixture
+    blackout()
+  }
+  class Programmer {
+    selection : list
+    values : map
+    select(FixtureGroup)
+    setColor(HSV)
+    setIntensity(float)
+    applyColorGradient(HSV a, HSV b)
+    apply(TimeContext)
+    makeCue(n) : Cue
+  }
+  class Values {
+    color : opt_HSV
+    intensity : opt_float
+  }
+  class Engine {
+    update()
+  }
+
+  FixtureLibrary "1" o-- "many" DMXMode
+  Patch *-- FixtureLibrary
+  Patch *-- "many" Universe
+  Patch o-- "many" Fixture
+  Patch ..> Classifier
+  Programmer o-- "many" Fixture
+  Programmer *-- "many" Values
+  Engine *-- Patch
+  Engine *-- Programmer
+}
+
+' ============================================================
+' Effects + Show
+' ============================================================
+package "Effects_Show" #FFFDF0 {
+  class EffectEngine {
+    update(TimeContext)
+  }
+  class Effect {
+    apply(TimeContext)
+    spec() : Spec
+  }
+  class GradientEffect {
+    a : HSV
+    b : HSV
+    apply(t)
+  }
+  class TimeContext {
+    elapsed : float
+    dt : float
+    phase(hz) : float
+  }
+  class Cue {
+    number : int
+    values : map_FID_Values
+    effects : list
+  }
+  class Sequence {
+    go(patch)
+    apply(TimeContext, patch)
+  }
+
+  GradientEffect --|> Effect
+  EffectEngine o-- "many" Effect
+  Effect o-- FixtureGroup
+  Effect ..> TimeContext
+  Sequence o-- "many" Cue
+  Programmer *-- EffectEngine
+  Engine o-- "many" Sequence
+}
+
+' ============================================================
+' Output
+' ============================================================
+class DMXOutput {
+  sendAll(patch)
+}
+Engine *-- DMXOutput
+DMXOutput ..> Universe
+
+note as N2
+  Engine::update() per frame (non-tracking):
+  blackout -> playback -> programmer
+  -> compose vdim -> send sACN
+end note
+Engine .. N2
+
+note as N3
+  Individual control:
+  a gradient walks the ordered colorCells()
+  list, giving each cell its own point
+  (t = i / (n - 1)). setColor() is broadcast.
+end note
+ColorCell .. N3
+
+@enduml

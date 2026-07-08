@@ -1,0 +1,239 @@
+@startuml LightEngineProgress
+' Implementation progress overlay of architecture.puml.
+' GREEN = implemented, RED = not yet. Colors are per-class backgrounds.
+
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam nodesep 30
+skinparam ranksep 45
+hide empty members
+
+skinparam class {
+  BackgroundColor<<done>> #B6E7B0
+  BorderColor<<done>> #2E7D32
+  BackgroundColor<<todo>> #F2B8B8
+  BorderColor<<todo>> #C62828
+  BackgroundColor<<partial>> #FFE7A3
+  BorderColor<<partial>> #F9A825
+}
+
+legend top left
+  <back:#B6E7B0>  implemented  </back>   <back:#FFE7A3>  partial  </back>   <back:#F2B8B8>  not yet  </back>
+endlegend
+
+' ============================================================
+' Layer 1 - GDTF-faithful definition
+' ============================================================
+package "Definition (GDTF FixtureType)" #F4F9FF {
+
+  class FixtureType <<todo>> {
+    name : string
+    manufacturer : string
+  }
+  enum GdtfAttribute <<partial>> {
+    Dimmer / VDimmer
+    ColorAdd_R / _G / _B / _W
+    (simplified enum only)
+  }
+  class Feature <<todo>> {
+    name : string
+  }
+  class Geometry <<todo>> {
+    name : string
+  }
+  class GeometryReference <<todo>> {
+    name : string
+    dmxOffset
+  }
+  class DMXMode <<todo>> {
+    name : string
+    footprint : uint16
+  }
+  class DMXChannel <<done>> {
+    address : uint16
+    res : Resolution
+    MaxDMX()
+  }
+  class LogicalChannel <<done>> {
+    attribute
+    channel
+    functions
+  }
+  class ChannelFunction <<done>> {
+    name : string
+    range_dmx
+    range_physical
+    Evaluate(dmx)
+  }
+  class ChannelSet <<todo>> {
+    name : string
+    dmxFrom / dmxTo
+  }
+
+  FixtureType *-- GdtfAttribute
+  FixtureType *-- Feature
+  FixtureType *-- Geometry
+  FixtureType *-- DMXMode
+  DMXMode "1" *-- "many" DMXChannel
+  DMXChannel "1" *-- "1..*" LogicalChannel
+  LogicalChannel "1" *-- "1..*" ChannelFunction
+  ChannelFunction "1" *-- "many" ChannelSet
+  LogicalChannel --> GdtfAttribute
+  DMXChannel --> Geometry
+  Geometry "1" o-- "many" GeometryReference
+}
+
+' ============================================================
+' Classification - GDTF attribute to engine capability
+' (skipped: the code uses GDTF::Attribute directly, no Type/Field split)
+' ============================================================
+package "Classification" #FFF7EE {
+  enum Type <<todo>> {
+    DIMMER / COLOR / POSITION / BEAM
+  }
+  enum Field <<todo>> {
+    R / G / B / W / PAN / TILT / DIMMER
+  }
+  class Classifier <<todo>> {
+    classify(GdtfAttribute)
+  }
+}
+
+' ============================================================
+' Runtime
+' ============================================================
+package "Runtime" #F3FFF3 {
+
+  class Parameter <<done>> {
+    def : shared LogicalChannel
+    bytes : ptr
+    baseOffset : uint32
+    cellIndex : uint16
+    Write(float)
+    Attribute() / Is()
+  }
+  class VDimmer <<todo>> {
+    (folded into ColorCell:
+     V routes to dimmer or color)
+  }
+  class ColorCell <<done>> {
+    m_r / m_g / m_b / m_w
+    m_dimmer
+    m_hsv
+    SetColor(HSV) / SetIntensity
+    Resolve()
+  }
+  class Fixture <<done>> {
+    fid / universe
+    Add() / Build() / Bind()
+    Set(Attribute, float)
+    SetColor(HSV) / SetIntensity
+    Cell(i) / ColorCells()
+    Resolve()
+  }
+  ColorCell o-- "1..*" Parameter
+  Fixture "1" *-- "many" Parameter
+  Fixture "1" *-- "many" ColorCell
+}
+
+' ============================================================
+' DMX plumbing
+' ============================================================
+package "DMX" #FFF3FB {
+  class Universe <<done>> {
+    id : uint16
+    buffer : bytes512
+    addFixture() / addFixtures()
+    blackout() / buffer()
+  }
+  class FixtureGroup <<done>> {
+    name : string
+    add() / colorCells()
+    setColor(HSV) / setIntensity()
+    parameters(Attribute)
+    resolve()
+  }
+  Universe "1" o-- "many" Fixture
+  FixtureGroup o-- "many" Fixture
+  FixtureGroup ..> ColorCell
+}
+
+' ============================================================
+' Engine components
+' ============================================================
+package "Engine" #F7F7FF {
+  class FixtureLibrary <<todo>> {
+    load(gdtf) / get(name)
+  }
+  class Patch <<todo>> {
+    fixtures : map_FID_Fixture
+    patch() / getFixture()
+  }
+  class Programmer <<todo>> {
+    select() / setColor()
+    applyColorGradient(a, b)
+    apply() / makeCue()
+  }
+  class Values <<todo>> {
+    color / intensity
+  }
+  class Engine <<todo>> {
+    update()
+  }
+  Patch *-- FixtureLibrary
+  Patch *-- "many" Universe
+  Engine *-- Patch
+  Engine *-- Programmer
+}
+
+' ============================================================
+' Effects + Show
+' ============================================================
+package "Effects_Show" #FFFDF0 {
+  class EffectEngine <<todo>> {
+    update(TimeContext)
+  }
+  class Effect <<todo>> {
+    apply() / spec()
+  }
+  class GradientEffect <<todo>> {
+    a / b : HSV
+  }
+  class TimeContext <<todo>> {
+    elapsed / dt / phase(hz)
+  }
+  class Cue <<todo>> {
+    number / values / effects
+  }
+  class Sequence <<todo>> {
+    go() / apply()
+  }
+  GradientEffect --|> Effect
+  EffectEngine o-- "many" Effect
+  Sequence o-- "many" Cue
+  Engine o-- "many" Sequence
+}
+
+' ============================================================
+' Output
+' ============================================================
+class DMXOutput <<todo>> {
+  sendAll(patch)
+}
+Engine *-- DMXOutput
+DMXOutput ..> Universe
+
+note as N1
+  DONE: GDTF channel data (DMXChannel /
+  LogicalChannel / ChannelFunction),
+  Parameter, ColorCell, Fixture, Universe,
+  FixtureGroup. Demo patches, groups,
+  colors + intensity, prints universe.
+  ----
+  NEXT: full GDTF import (FixtureType,
+  Geometry/DMXMode/ChannelSet), Patch +
+  Engine frame loop, Programmer + gradient,
+  Effects, Cue/Sequence, sACN output.
+end note
+
+@enduml

@@ -19,7 +19,8 @@ int main(int argc, char **argv)
 {
     const std::string grammarDir = MIXER_GRAMMAR_DIR;
     const std::string tokenFile = grammarDir + "/demo/lang.tok";
-    const std::string inputFile = argc > 1 ? argv[1] : grammarDir + "/demo/input.txt";
+    const std::string inputFile =
+        argc > 1 ? argv[1] : grammarDir + "/demo/input.txt";
 
     // --- 1. Lex the input into tokens ------------------------------------
     Parsing::Tokenizer::Parser lexer(tokenFile);
