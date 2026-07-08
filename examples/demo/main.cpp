@@ -1,8 +1,10 @@
+#include <chrono>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
 #include <memory>
 #include <sstream>
+#include <thread>
 
 #include "LightEngine/DMX/FixtureGroup.h"
 #include "LightEngine/DMX/Universe.h"
@@ -12,6 +14,7 @@
 #include "Utils/Colors/Colors.h"
 #include "Utils/Colors/Font.h"
 #include "Utils/Colors/HSV.h"
+#include "Utils/Network/Interfaces.h"
 
 using namespace LightEngine;
 using Fixtures::Fixture;
@@ -120,33 +123,41 @@ int main()
 {
     Engine::Engine engine;
 
-    // 10 RGB fixtures (3 channels each) then 5 DimmerRGB (4 channels each),
-    // all patched into universe 1.
-    auto rgbFids = engine.patch(MakeRGB(), 1, 10);
-    auto dimFids = engine.patch(MakeDimmerRGB(), 1, 5);
+    // RGB fixtures (3 channels each) across three universes.
+    Fixture rgb = MakeRGB();
+    auto fids8 = engine.patch(rgb, 8, 93);
+    auto fids9 = engine.patch(rgb, 9, 120);
+    auto fids10 = engine.patch(rgb, 10, 60);
 
-    // groups: 1 = the RGBs, 2 = the DimmerRGBs, 3 = all of them
-    engine.addToGroup("rgb", rgbFids);
-    engine.addToGroup("dimmer", dimFids);
-    engine.addToGroup("all", rgbFids);
-    engine.addToGroup("all", dimFids);
+    // one group holding everything we just patched
+    engine.addToGroup("all", fids8);
+    engine.addToGroup("all", fids9);
+    engine.addToGroup("all", fids10);
 
-    // all editing goes through the programmer layer now (fixtures/groups hold
-    // no state; the programmer does).
+    // set them all to yellow at full via the programmer layer
     auto &prog = engine.programmer();
-
-    // colors: group 1 green, group 2 blue
-    prog.select(*engine.getGroup("rgb"));
-    prog.setColor(Utils::Colors::HSV(120.f, 1.f, 1.f));
-    prog.select(*engine.getGroup("dimmer"));
-    prog.setColor(Utils::Colors::HSV(240.f, 1.f, 1.f));
-
-    // group 3: intensity ramp 0..1 across every fixture (V overrides the 1.0)
     prog.select(*engine.getGroup("all"));
-    prog.setIntensityRamp(0.f, 1.f);
+    prog.setColor(Utils::Colors::HSV(60.f, 1.f, 1.f)); // yellow, full intensity
 
-    // run one frame (blackout -> compose layers -> resolve), then print it
-    engine.update();
-    printUniverse(*engine.getUniverse(1), 64);
+    // output: stream sACN from this machine's primary interface
+    const Utils::Network::IP ip = Utils::Network::Interfaces::primaryIP();
+    engine.setSourceName("LightEngine");
+    engine.setIP(ip);
+    std::cout << "Streaming sACN from " << ip.str()
+              << " (universes 8, 9, 10) - Ctrl+C to stop\n";
+
+    // continuous full-frame output, like a real sACN source (~40 Hz)
+    using namespace std::chrono;
+    const auto period = milliseconds(25);
+    auto last = steady_clock::now();
+    while (true)
+    {
+        const auto now = steady_clock::now();
+        const float dt = duration<float>(now - last).count();
+        last = now;
+
+        engine.update(dt); // compose -> resolve -> send
+        std::this_thread::sleep_for(period);
+    }
     return 0;
 }
