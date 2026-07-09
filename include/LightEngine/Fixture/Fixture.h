@@ -9,7 +9,6 @@
 #include "LightEngine/Fixture/ColorCell.h"
 #include "LightEngine/Fixture/Parameter.h"
 #include "LightEngine/GDTF/LogicalChannel.h"
-#include "Utils/Colors/HSV.h"
 #include "Utils/Storage/FragmentedStorage.h"
 
 //
@@ -49,7 +48,8 @@ public:
     Fixture &operator=(const Fixture &other);
 
     // ---- build ----
-    // Append a parameter from a shared definition, tagged with its emitter/cell.
+    // Append a parameter from a shared definition, tagged with its
+    // emitter/cell.
     Parameter &Add(std::shared_ptr<const GDTF::LogicalChannel> def,
                    uint16_t cellIndex = 0);
     // Build the attribute index + color cells. Call once after all Add()s.
@@ -82,7 +82,8 @@ public:
     void SetUniverse(uint16_t universe) { m_universe = universe; }
     uint32_t Footprint() const { return size; }
     const std::vector<Parameter> &Parameters() const { return m_parameters; }
-    const std::map<GDTF::Attribute, std::vector<Parameter *>> &ByAttribute() const
+    const std::map<GDTF::Attribute, std::vector<Parameter *>> &
+    ByAttribute() const
     {
         return m_byAttribute;
     }

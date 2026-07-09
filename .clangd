@@ -1,2 +1,5 @@
 CompileFlags:
   CompilationDatabase: build/debug
+  Add:
+    - -I/home/bobi/Coding/LightEngine/lib/NewSyntaxParser/src
+    - -I/home/bobi/Coding/LightEngine/include

@@ -1,7 +1,14 @@
 #include "LightEngine/DMX/Universe.h"
 
+#include "Utils/Colors/Colors.h"
+#include "Utils/Colors/Font.h"
+#include "Utils/Colors/HSV.h"
+
+#include <cmath>
+#include <iomanip>
 #include <iterator>
 #include <set>
+#include <sstream>
 
 namespace LightEngine::DMX
 {
@@ -115,5 +122,65 @@ Universe::byName(const std::string &name) const
 std::string Universe::describe() const
 {
     return "Universe " + std::to_string(m_id) + "\n" + fragmentsToString();
+}
+
+std::string Universe::dump(int channels) const
+{
+    namespace F = Utils::Font;
+
+    // map every channel to the index of the fixture that owns it (-1 = unpatched)
+    std::vector<int> owner(512, -1);
+    int idx = 0;
+    for (const auto &f : m_fragments)
+    {
+        for (uint32_t c = 0; c < f->Footprint(); ++c)
+        {
+            owner[f->start + c] = idx;
+        }
+        ++idx;
+    }
+
+    auto colorFor = [](int ownerIdx) -> std::string
+    {
+        if (ownerIdx < 0)
+        {
+            return F::colorDim;
+        }
+        // distinct hue per fixture
+        Utils::Colors::HSV hsv(std::fmod(110.f + ownerIdx * 65.f, 360.f), 0.5f,
+                               0.9f);
+        return F::colorByRGB(Utils::Colors::hsvToRgb(hsv), true);
+    };
+
+    const int cols = 16;
+    std::ostringstream ss;
+    ss << "Universe " << m_id << "  (" << m_fragments.size() << " fixtures)\n"
+       << F::colorItalic;
+    for (int i = 0; i < cols; ++i)
+    {
+        ss << "0x" << "0123456789ABCDEF"[i] << " ";
+    }
+    ss << F::colorReset << "\n";
+
+    auto sep = [&]
+    {
+        for (int i = 0; i < cols; ++i)
+            ss << "----";
+        ss << "\n";
+    };
+    sep();
+
+    for (int i = 0; i < channels; ++i)
+    {
+        if (i % cols == 0 && i != 0)
+        {
+            ss << "\n";
+        }
+        ss << colorFor(owner[i]) << std::setw(3) << int(m_buffer[i])
+           << F::colorReset << " ";
+    }
+    ss << "\n";
+    sep();
+    return ss.str();
 }
 } // namespace LightEngine::DMX

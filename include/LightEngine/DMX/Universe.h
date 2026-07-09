@@ -67,5 +67,9 @@ public:
     void blackout() { m_buffer.fill(0); }
 
     [[nodiscard]] std::string describe() const;
+
+    // Pretty 16-column DMX dump: hex header, dashed separators, each channel
+    // padded to 3 and coloured per owning fixture (unpatched channels dimmed).
+    [[nodiscard]] std::string dump(int channels = 64) const;
 };
 } // namespace LightEngine::DMX
