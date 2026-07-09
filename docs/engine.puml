@@ -1,0 +1,335 @@
+@startuml LightEngineEngine
+' Full engine architecture: current (implemented) + planned subsystems.
+' PlantUML treats ' as a comment only at the START of a line.
+'
+' Colour legend:
+'   #DFF5DF  implemented (code exists today)
+'   #FFE9CC  planned    (designed, not yet built)
+
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam nodesep 30
+skinparam ranksep 45
+hide empty members
+
+legend top left
+  <back:#DFF5DF>   </back> implemented
+  <back:#FFE9CC>   </back> planned
+endlegend
+
+' ============================================================
+' GDTF-flavoured definition (flyweight, shared by value copies)
+' ============================================================
+package "GDTF (definition)" #DFF5DF {
+  enum Attribute {
+    DIMMER
+    VDIMMER
+    COLOR_R
+    COLOR_G
+    COLOR_B
+    COLOR_W
+  }
+  class DMXChannel {
+    address : uint
+    res : Bit8|Bit16
+    MaxDMX() : uint16
+  }
+  class Ranges <<ChannelFunction>> {
+    range_dmx : from..to
+    range_physical : min..max
+  }
+  class LogicalChannel {
+    attribute : Attribute
+    channel : DMXChannel
+    functions : vector<Fn>
+  }
+  LogicalChannel *-- DMXChannel
+  LogicalChannel *-- "many" Ranges
+  LogicalChannel --> Attribute
+}
+
+' ============================================================
+' Runtime fixture model (points into a universe buffer)
+' ============================================================
+package "Fixture (runtime)" #DFF5DF {
+  class Parameter {
+    def : shared_ptr<const LogicalChannel>
+    bytes : ptr
+    baseOffset : uint32
+    cellIndex : uint16
+    Write(norm 0..1)
+  }
+  class ColorCell {
+    r/g/b/w : Parameter*
+    dimmer : Parameter*   'nullptr => virtual dimmer
+    hsv : HSV             'transient scratch
+    SetColor(HSV)
+    Resolve()
+  }
+  class Fixture {
+    fid : uint16
+    universe : uint16
+    Add(def, cell)
+    Build()
+    Resolve(FixtureValues)   'stateless sink
+  }
+  ColorCell o-- "1..*" Parameter
+  Fixture *-- "many" Parameter
+  Fixture *-- "many" ColorCell
+  Parameter --> LogicalChannel
+}
+
+note right of Fixture
+  Non-tracking + stateless: a Fixture keeps
+  NO values between frames. Resolve() writes
+  whatever the compositor hands it, then
+  forgets. Virtual dimmer is folded inside
+  ColorCell::Resolve() (no separate pass).
+end note
+
+' ============================================================
+' DMX plumbing
+' ============================================================
+package "DMX" #DFF5DF {
+  class Universe {
+    id : uint16
+    buffer : array<uint8,512>
+    addFixture(def, start) : Fixture
+    blackout()
+    buffer() : bytes
+  }
+  class FixtureGroup {
+    name : string
+    fixtures() : list
+    colorCells() : list   'gradient target
+    parameters(Attribute) : list
+  }
+  Universe "1" o-- "many" Fixture
+  FixtureGroup o-- "many" Fixture : selection only
+}
+
+note bottom of FixtureGroup
+  Pure selection now - holds no values.
+  Drive it via ProgrammerLayer::select().
+end note
+
+' ============================================================
+' Per-frame value pipeline (the compositor)
+' ============================================================
+package "Frame pipeline" #DFF5DF {
+  enum MergePolicy {
+    HTP  'max wins (intensity)
+    LTP  'latest wins (color, position)
+  }
+  class FixtureValues {
+    color : opt<HSV>
+    generic : map<Attribute,float>
+  }
+  class Frame {
+    values : map<fid, FixtureValues>
+    contribute(fid, vals, policy)
+    clear()
+  }
+  class TimeContext {
+    now : double
+    dt : float
+    frame : uint64
+  }
+  Frame o-- "many" FixtureValues
+  Frame ..> MergePolicy
+}
+
+' ============================================================
+' Layers (state lives here; composed low -> high priority)
+' ============================================================
+package "Layers" {
+  abstract class Layer #DFF5DF {
+    priority() : int
+    enabled() : bool
+    apply(Frame&, TimeContext)
+  }
+  class ProgrammerLayer #DFF5DF {
+    edits : map<fid, FixtureValues>
+    selection : vector<fid>
+    select(FixtureGroup)
+    setColor / setIntensity / setIntensityRamp
+    priority() = 1000
+  }
+  class PlaybackLayer #FFE9CC {
+    sequences : vector<Sequence>
+    from : map<fid,FixtureValues>  'fade origin
+    target : Cue*
+    fadeElapsed / fadeDuration
+    go(seq) ; goToCue(seq, n)
+    priority() = 100
+  }
+  class EffectEngine #FFE9CC {
+    effects : vector<Effect>
+    update(TimeContext)
+    priority() = 2000
+  }
+  class Effect #FFE9CC {
+    target : FixtureGroup
+    apply(Frame&, TimeContext)
+  }
+  class GradientEffect #FFE9CC {
+    a : HSV
+    b : HSV
+  }
+  ProgrammerLayer --|> Layer
+  PlaybackLayer --|> Layer
+  EffectEngine --|> Layer
+  GradientEffect --|> Effect
+  EffectEngine o-- "many" Effect
+  Layer ..> Frame : contribute()
+  Layer ..> TimeContext
+}
+
+note right of Layer
+  Each layer STORES its own values.
+  update(): blackout -> for each layer
+  (sorted by priority) apply() into Frame
+  -> resolve Frame into fixtures -> send.
+  Higher priority wins (programmer over
+  playback), merge per MergePolicy.
+end note
+
+' ============================================================
+' Show content: cues & sequences (planned)
+' ============================================================
+package "Show (planned)" #FFE9CC {
+  class Cue {
+    number : int
+    name : string
+    values : map<fid, FixtureValues>
+    fadeIn : float
+    effects : list
+  }
+  class Sequence {
+    name : string
+    cues : vector<Cue>
+    current : int
+  }
+  Sequence o-- "many" Cue
+  PlaybackLayer o-- "many" Sequence
+  Cue ..> FixtureValues
+}
+
+' ============================================================
+' Palettes / pools (planned) - referenced, category-scoped
+' ============================================================
+package "Palettes (planned)" #FFE9CC {
+  enum PaletteType {
+    DIMMER
+    COLOR
+    POSITION
+    BEAM
+  }
+  class Palette {
+    id : uint16
+    name : string
+    kind : PaletteType
+    values : map<fid, FixtureValues>  'masked to kind
+  }
+  class PalettePool {
+    palettes : map<id, Palette>
+    record(kind, name, from ProgrammerLayer)
+    get(id) : Palette
+  }
+  class PaletteRef {
+    "Absolute(value) | Ref(paletteId)"
+  }
+  class Classifier {
+    classify(Attribute) : PaletteType
+  }
+  PalettePool o-- "many" Palette
+  Palette --> PaletteType
+  Palette ..> FixtureValues
+  PaletteRef ..> Palette : dereferenced\nat apply()
+  ProgrammerLayer ..> PaletteRef : edits become refs
+  Classifier ..> Attribute
+  Palette ..> Classifier : mask by kind
+}
+
+note bottom of Palette
+  Referenced, not copied: layers store a
+  PaletteRef and dereference every frame,
+  so editing a palette live-updates all
+  cues/edits that point at it.
+end note
+
+' ============================================================
+' Engine + output
+' ============================================================
+package "Engine" {
+  class Patch #DFF5DF {
+    universes : map<id, Universe>
+    fixtures : map<fid, Fixture>
+    dirty : set<id>
+    patch(def, universe, amount) : fids
+    getFixture(fid) : Fixture
+    blackout()
+  }
+  class FixtureLibrary #FFE9CC {
+    loadGDTF(path) : Fixture
+    get(name) : Fixture
+  }
+  class DMXOutput #DFF5DF {
+    senders : map<id, SacnSender>  'sACN only for now
+    setIP / setSourceName
+    send(Universe) ; sendAll(Patch)
+  }
+  class Engine #DFF5DF {
+    patch(...) ; group(name)
+    programmer() : ProgrammerLayer
+    addLayer(Layer*)
+    setIP(ip) ; setSourceName(n)
+    update(dt)
+  }
+  Engine *-- Patch
+  Engine *-- DMXOutput
+  Engine *-- Frame
+  Engine *-- TimeContext
+  Engine *-- ProgrammerLayer
+  Engine o-- "many" Layer : composed
+  Engine o-- "many" FixtureGroup
+  Engine o-- PalettePool
+  Engine o-- "many" Sequence
+  Patch *-- "many" Universe
+  Patch o-- "many" Fixture
+  Patch ..> FixtureLibrary
+}
+
+note as N_LOOP
+  Engine::update(dt) per frame:
+   1. advance TimeContext
+   2. blackout universes
+   3. compose layers (low->high) into Frame
+   4. resolve Frame -> Fixture::Resolve()
+   5. if output enabled: DMXOutput.sendAll (sACN)
+end note
+Engine .. N_LOOP
+
+DMXOutput ..> Universe : reads buffer()
+
+' ============================================================
+' Networking utils
+' ============================================================
+package "Utils::Network" #DFF5DF {
+  class SacnSender {
+    begin(universe, ip)
+    send(bytes512)
+  }
+  class IP {
+    a.b.c.d
+    str()
+  }
+  class Interfaces {
+    primaryIP() : IP
+  }
+  SacnSender --> IP
+  Interfaces --> IP
+  DMXOutput *-- SacnSender
+}
+
+@enduml
