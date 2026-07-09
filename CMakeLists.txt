@@ -49,11 +49,3 @@ target_include_directories(LightEngine
 # --------------------------------------------------
 add_executable(LightEngine_demo examples/demo/main.cpp)
 target_link_libraries(LightEngine_demo PRIVATE LightEngine::LightEngine)
-
-# --------------------------------------------------
-# CLI demo: parse a command line into the typed Command AST and print it.
-# --------------------------------------------------
-add_executable(mixer_cli examples/cli/main.cpp)
-target_link_libraries(mixer_cli PRIVATE LightEngine::LightEngine)
-target_compile_definitions(mixer_cli PRIVATE
-        MIXER_GRAMMAR_DIR="${CMAKE_CURRENT_SOURCE_DIR}/grammar")
