@@ -16,6 +16,14 @@
 #include "LightEngine/Engine/TimeContext.h"
 // #include "LightEngine/Show/Sequence.h"      // TODO: playback / cues
 
+// Command subsystem is owned by Engine but kept out of this header (internal):
+// forward-declared here, fully included only in Engine.cpp.
+namespace LightEngine::Commands
+{
+class CommandParser;
+class CommandExecutor;
+} // namespace LightEngine::Commands
+
 //
 // Engine: the top-level orchestrator. Owns the Patch (universes + fixtures), the
 // programmer, the stored object pools and the output stage, exposing a small
@@ -38,8 +46,14 @@ class Engine
 
     Stored m_stored; // all object pools (groups, presets, cues...) live here
 
+    // Command subsystem (text -> AST -> actions). Held by pointer so the
+    // parser/executor headers stay out of the public API.
+    std::unique_ptr<Commands::CommandParser> m_parser;
+    std::unique_ptr<Commands::CommandExecutor> m_exec;
+
 public:
     Engine();
+    ~Engine(); // out-of-line: m_parser/m_exec are incomplete types here
 
     // ---- patching (template overload; name overload needs FixtureLibrary) ----
     std::vector<uint16_t> patch(const Fixtures::Fixture &fixture,
@@ -50,6 +64,14 @@ public:
     // ---- stored pools ----
     [[nodiscard]] Stored &stored() { return m_stored; }
     [[nodiscard]] const Stored &stored() const { return m_stored; }
+
+    // ---- text commands ----
+    // Load the grammar + token definitions (enables command()).
+    void loadCommands(const std::string &tokensFile,
+                      const std::string &grammarFile);
+    // Parse and execute one command line. Returns false on a parse error (or
+    // if loadCommands() hasn't been called).
+    bool command(const std::string &line);
 
     // ---- programmer ----
     // Console-style Clear: wipe the programmer's values and selection so it

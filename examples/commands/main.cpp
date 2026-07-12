@@ -1,8 +1,6 @@
 #include <iostream>
 #include <string>
 
-#include "LightEngine/Commands/CommandExecutor.h"
-#include "LightEngine/Commands/CommandParser.h"
 #include "LightEngine/Engine/Engine.h"
 #include "LightEngine/Engine/FixtureBuilder.h"
 #include "Utils/Colors/HSV.h"
@@ -28,10 +26,8 @@ int main()
 
     // Load the grammar + token definitions (paths relative to the repo root,
     // the working directory when run as ./build/LightEngine_commands).
-    Commands::CommandParser parser(
-        "include/LightEngine/Commands/data/commands.txt",
-        "include/LightEngine/Commands/data/commands.syn");
-    Commands::CommandExecutor exec(engine);
+    engine.loadCommands("include/LightEngine/Commands/data/commands.txt",
+                        "include/LightEngine/Commands/data/commands.syn");
 
     auto &prog = engine.programmer();
 
@@ -77,15 +73,12 @@ int main()
             continue;
         }
 
-        auto cmds = parser.parse(line);
-        if (cmds.empty())
+        if (!engine.command(line))
         {
             std::cout << "  parse error\n";
             continue;
         }
-        exec.run(cmds);
-        std::cout << "  ok [cmds=" << cmds.size()
-                  << " selection=" << prog.selection().size()
+        std::cout << "  ok [selection=" << prog.selection().size()
                   << " edits=" << prog.edits().size() << "]\n";
     }
 

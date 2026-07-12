@@ -1,10 +1,33 @@
 #include "LightEngine/Engine/Engine.h"
 
+#include "LightEngine/Commands/CommandExecutor.h"
+#include "LightEngine/Commands/CommandParser.h"
+
 #include <algorithm>
 
 namespace LightEngine::Engine
 {
 Engine::Engine() : m_programmer(m_patch) {} // m_patch declared first -> safe
+Engine::~Engine() = default; // here the command types are complete
+
+// ---- text commands ----
+void Engine::loadCommands(const std::string &tokensFile,
+                          const std::string &grammarFile)
+{
+    m_parser = std::make_unique<Commands::CommandParser>(tokensFile, grammarFile);
+    m_exec = std::make_unique<Commands::CommandExecutor>(*this);
+}
+
+bool Engine::command(const std::string &line)
+{
+    if (!m_parser || !m_exec)
+        return false;
+    auto program = m_parser->parse(line);
+    if (program.empty())
+        return false;
+    m_exec->run(program);
+    return true;
+}
 
 // ---- patching ----
 std::vector<uint16_t> Engine::patch(const Fixtures::Fixture &fixture,
