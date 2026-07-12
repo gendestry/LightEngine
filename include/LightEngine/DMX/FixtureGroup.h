@@ -56,6 +56,18 @@ public:
     {
         return m_fixtures;
     }
+
+    [[nodiscard]] std::vector<uint16_t> fids() const
+    {
+        std::vector<uint16_t> fidsarray;
+        // fidsarray.resize(m_fixtures.size());
+        for (auto &f : m_fixtures)
+        {
+            fidsarray.push_back(f->Fid());
+        }
+        return fidsarray;
+    }
+
     [[nodiscard]] std::size_t size() const { return m_fixtures.size(); }
     [[nodiscard]] bool empty() const { return m_fixtures.empty(); }
     [[nodiscard]] bool contains(const FixturePtr &fixture) const;

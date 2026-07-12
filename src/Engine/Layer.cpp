@@ -12,28 +12,19 @@ Utils::Colors::HSV &ProgrammerLayer::ensureColor(uint16_t fid)
     return *v.color;
 }
 
-void ProgrammerLayer::select(const DMX::FixtureGroup &group)
-{
-    m_selection.clear();
-    for (const auto &f : group.fixtures())
-    {
-        m_selection.push_back(f->Fid());
-    }
-}
-
 void ProgrammerLayer::setColor(const Utils::Colors::HSV &hsv)
 {
-    for (uint16_t fid : m_selection)
+    for (const auto &f : m_selection.fixtures())
     {
-        ensureColor(fid) = hsv;
+        ensureColor(f->Fid()) = hsv;
     }
 }
 
 void ProgrammerLayer::setHueSat(float h, float s)
 {
-    for (uint16_t fid : m_selection)
+    for (const auto &f : m_selection.fixtures())
     {
-        Utils::Colors::HSV &c = ensureColor(fid);
+        Utils::Colors::HSV &c = ensureColor(f->Fid());
         c.h = h;
         c.s = s;
     }
@@ -41,19 +32,33 @@ void ProgrammerLayer::setHueSat(float h, float s)
 
 void ProgrammerLayer::setIntensity(float v)
 {
-    for (uint16_t fid : m_selection)
+    for (const auto &f : m_selection.fixtures())
     {
-        ensureColor(fid).v = v;
+        ensureColor(f->Fid()).v = v;
     }
 }
 
 void ProgrammerLayer::setIntensityRamp(float a, float b)
 {
-    const std::size_t n = m_selection.size();
+    const auto &fixtures = m_selection.fixtures();
+    const std::size_t n = fixtures.size();
     for (std::size_t i = 0; i < n; ++i)
     {
         float t = n <= 1 ? 0.f : float(i) / float(n - 1);
-        ensureColor(m_selection[i]).v = a + (b - a) * t;
+        ensureColor(fixtures[i]->Fid()).v = a + (b - a) * t;
+    }
+}
+
+void ProgrammerLayer::fanColor(float hueA, float hueB, float sat)
+{
+    const auto &fixtures = m_selection.fixtures();
+    const std::size_t n = fixtures.size();
+    for (std::size_t i = 0; i < n; ++i)
+    {
+        float t = n <= 1 ? 0.f : float(i) / float(n - 1);
+        Utils::Colors::HSV &c = ensureColor(fixtures[i]->Fid());
+        c.h = hueA + (hueB - hueA) * t;
+        c.s = sat;
     }
 }
 

@@ -3,6 +3,10 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <string>
+#include <unordered_map>
+
+#include "Utils/Colors/Font.h"
 
 namespace LightEngine::Engine
 {
@@ -11,6 +15,16 @@ template <class T> class Pool
 {
     using Ptr = std::shared_ptr<T>;
     std::map<uint32_t, Ptr> m_items;
+    std::unordered_map<std::string, uint32_t> m_byName;
+
+    void index(const std::string &name, uint32_t num)
+    {
+        if (!name.empty())
+        {
+            m_byName[name] = num;
+        }
+    }
+    void unindex(const std::string &name) { m_byName.erase(name); }
 
 public:
     // ---- store ----------------------------------------------------------
@@ -20,7 +34,10 @@ public:
     T &store(uint32_t num, Ptr obj)
     {
         assert(obj && "Pool::store: null object");
+        if (auto old = get(num)) // overwriting: drop the replaced name
+            unindex(old->name());
         obj->setNumber(num);
+        index(obj->name(), num); // pick up any name it arrived with
         auto &slot = m_items[num];
         slot = std::move(obj);
         return *slot;
@@ -28,6 +45,17 @@ public:
 
     // Store into the next free slot.
     T &store(Ptr obj) { return store(nextFree(), std::move(obj)); }
+
+    bool rename(uint32_t num, const std::string &name)
+    {
+        auto it = m_items.find(num);
+        if (it == m_items.end())
+            return false;
+        unindex(it->second->name());
+        it->second->setName(name); // allowed: Pool is a friend
+        index(name, num);
+        return true;
+    }
 
     // Construct a T in place at an explicit slot / the next free slot.
     // Note: emplaceAt vs emplace are deliberately distinct names - a single
@@ -55,12 +83,35 @@ public:
         return m_items.count(num) != 0;
     }
 
+    [[nodiscard]] Ptr get(const std::string &name) const
+    {
+        auto it = m_byName.find(name);
+        return it == m_byName.end() ? nullptr : get(it->second);
+    }
+
+    // [[nodiscard]] bool contains(uint32_t num) const
+    // {
+    //     return m_items.count(num) != 0;
+    // }
+
     // ---- mutate ---------------------------------------------------------
 
     // Remove a slot. Returns true if something was erased.
-    bool remove(uint32_t num) { return m_items.erase(num) != 0; }
+    bool remove(uint32_t num)
+    {
+        auto it = m_items.find(num);
+        if (it == m_items.end())
+            return false;
+        unindex(it->second->name());
+        m_items.erase(it);
+        return true;
+    }
 
-    void clear() { m_items.clear(); }
+    void clear()
+    {
+        m_items.clear();
+        m_byName.clear();
+    }
 
     // Move an object to a new number (e.g. "Move Group 3 at 10").
     // No-op if `from` is empty; overwrites `to` if occupied.
@@ -71,7 +122,7 @@ public:
         auto it = m_items.find(from);
         if (it == m_items.end())
             return false;
-        store(to, std::move(it->second));
+        store(to, std::move(it->second)); // re-stamps number + reindexes name
         m_items.erase(it);
         return true;
     }
@@ -104,6 +155,21 @@ public:
     [[nodiscard]] const std::map<uint32_t, Ptr> &items() const
     {
         return m_items;
+    }
+
+    // Multi-line dump: a header with the count, then each item's own describe()
+    // indented, in ascending number order.
+    [[nodiscard]] std::string describe() const
+    {
+        std::string s = Utils::Font::bold + "Pool" + Utils::Font::reset +
+                        Utils::Font::colorDim + " [" +
+                        std::to_string(m_items.size()) + "]" +
+                        Utils::Font::reset;
+        for (const auto &[num, obj] : m_items)
+        {
+            s += "\n  " + obj->describe();
+        }
+        return s;
     }
 };
 

@@ -27,15 +27,50 @@ int main()
     auto fids9 = engine.patch(rgb, 9, 120);
     auto fids10 = engine.patch(rgb, 10, 60);
 
-    // one group holding everything we just patched
-    engine.addToGroup("all", fids8);
-    engine.addToGroup("all", fids9);
-    engine.addToGroup("all", fids10);
-
-    // set them all to yellow at full via the programmer layer
+    // build a selection from everything we just patched, then store it as
+    // group 1: select() starts fresh, add() accumulates (ordered, deduped).
     auto &prog = engine.programmer();
-    prog.select(*engine.getGroup("all"));
-    prog.setColor(Utils::Colors::HSV(60.f, 1.f, 1.f)); // yellow, full intensity
+    prog.select(fids8);
+    prog.add(fids9);
+    prog.add(fids10);
+    engine.storeGroup(1);
+    engine.stored().groups().rename(1, "all");
+
+    // fan hue red->blue across the selection, full intensity, then bank it as
+    // color preset 1 and dimmer preset 1.
+    prog.fanColor(0.f, 240.f);   // hue 0 (red) .. 240 (blue)
+    prog.setIntensityRamp(0.25f, 1.f);
+    engine.storeColorPreset(1);
+    engine.stored().colorPresets().rename(1, "Rainbow");
+    engine.storeDimmerPreset(1);
+    engine.stored().dimmerPresets().rename(1, "Ramp");
+
+    // ---- functional test ----------------------------------------------------
+    auto probe = [&](const char *label) {
+        engine.update();
+        const auto *v = engine.programmer().edits().empty()
+                            ? nullptr
+                            : &engine.programmer().edits().begin()->second;
+        std::cout << label << ": edits=" << engine.programmer().edits().size();
+        if (v && v->color)
+            std::cout << " fid" << engine.programmer().edits().begin()->first
+                      << " h=" << v->color->h << " s=" << v->color->s
+                      << " v=" << v->color->v;
+        std::cout << "\n";
+    };
+
+    probe("after fan+ramp");
+
+    // clear, then recall both presets onto a fresh selection of the group
+    engine.clear();
+    probe("after clear");                 // expect edits=0
+
+    engine.selectGroup(1);
+    engine.recallColorPreset(1);
+    engine.recallDimmerPreset(1);
+    probe("after recall color+dimmer");   // expect edits back, h/s/v set
+
+    std::cout << engine.stored().describe() << "\n";
 
     // output: stream sACN from this machine's primary interface
     const Utils::Network::IP ip = Utils::Network::Interfaces::primaryIP();
@@ -51,17 +86,17 @@ int main()
               << " (universes 8, 9, 10) - Ctrl+C to stop\n";
 
     // continuous full-frame output, like a real sACN source (~40 Hz)
-    using namespace std::chrono;
-    const auto period = milliseconds(25);
-    auto last = steady_clock::now();
-    while (true)
-    {
-        const auto now = steady_clock::now();
-        const float dt = duration<float>(now - last).count();
-        last = now;
-
-        engine.update(dt); // compose -> resolve -> send
-        std::this_thread::sleep_for(period);
-    }
+    // using namespace std::chrono;
+    // const auto period = milliseconds(25);
+    // auto last = steady_clock::now();
+    // while (true)
+    // {
+    //     const auto now = steady_clock::now();
+    //     const float dt = duration<float>(now - last).count();
+    //     last = now;
+    //
+    //     engine.update(dt); // compose -> resolve -> send
+    //     std::this_thread::sleep_for(period);
+    // }
     return 0;
 }
