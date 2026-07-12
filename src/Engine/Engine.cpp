@@ -36,16 +36,15 @@ Pools::Group &Engine::storeGroup()
 }
 
 // ---- color presets ----
+// Captures the whole programmer, not just the current selection: every fixture
+// touched since the last clear() is banked, so a preset built across several
+// selections (group then a stray fixture) keeps them all.
 Pools::ColorPreset &Engine::storeColorPreset(uint32_t num)
 {
     auto preset = std::make_shared<Pools::ColorPreset>();
-    const auto &edits = m_programmer.edits();
-    for (const auto &f : m_programmer.selection().fixtures())
-    {
-        const auto it = edits.find(f->Fid());
-        if (it != edits.end() && it->second.color)
-            preset->set(f->Fid(), {it->second.color->h, it->second.color->s});
-    }
+    for (const auto &[fid, v] : m_programmer.edits())
+        if (v.color)
+            preset->set(fid, {v.color->h, v.color->s});
     return m_stored.colorPresets().store(num, std::move(preset));
 }
 
@@ -59,13 +58,9 @@ void Engine::recallColorPreset(uint32_t num)
 Pools::DimmerPreset &Engine::storeDimmerPreset(uint32_t num)
 {
     auto preset = std::make_shared<Pools::DimmerPreset>();
-    const auto &edits = m_programmer.edits();
-    for (const auto &f : m_programmer.selection().fixtures())
-    {
-        const auto it = edits.find(f->Fid());
-        if (it != edits.end() && it->second.color)
-            preset->set(f->Fid(), it->second.color->v);
-    }
+    for (const auto &[fid, v] : m_programmer.edits())
+        if (v.color)
+            preset->set(fid, v.color->v);
     return m_stored.dimmerPresets().store(num, std::move(preset));
 }
 

@@ -49,3 +49,6 @@ target_include_directories(LightEngine
 # --------------------------------------------------
 add_executable(LightEngine_demo examples/demo/main.cpp)
 target_link_libraries(LightEngine_demo PRIVATE LightEngine::LightEngine)
+
+add_executable(LightEngine_commands examples/commands/main.cpp)
+target_link_libraries(LightEngine_commands PRIVATE LightEngine::LightEngine)

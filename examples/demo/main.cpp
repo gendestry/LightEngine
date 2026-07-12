@@ -2,6 +2,8 @@
 #include <iostream>
 #include <thread>
 
+#include "LightEngine/Commands/CommandExecutor.h"
+#include "LightEngine/Commands/CommandParser.h"
 #include "LightEngine/DMX/Universe.h"
 #include "LightEngine/Engine/Engine.h"
 #include "LightEngine/Engine/FixtureBuilder.h"
@@ -71,6 +73,78 @@ int main()
     probe("after recall color+dimmer");   // expect edits back, h/s/v set
 
     std::cout << engine.stored().describe() << "\n";
+
+    // ---- command executor test (hand-built AST) -----------------------------
+    // Equivalent command line:  clear ; 1 thru 6 at 100 ; store group 2
+    {
+        using namespace Macros;
+        Program cmds;
+
+        auto clr = std::make_unique<ClearCmd>();
+        cmds.push_back(std::move(clr));
+
+        auto sc = std::make_unique<SelectCmd>();
+        Item item;
+        item.op = "";
+        auto range = std::make_unique<FixtureRange>();
+        range->from = 1;
+        range->to = 6;
+        item.sel = std::move(range);
+        sc->items.push_back(std::move(item));
+        sc->hasAt = true;
+        sc->at.isPreset = false;
+        sc->at.level = 100;
+        cmds.push_back(std::move(sc));
+
+        auto store = std::make_unique<StoreCmd>();
+        auto grp = std::make_unique<Group>();
+        grp->id = 2;
+        store->target = std::move(grp);
+        cmds.push_back(std::move(store));
+
+        Commands::CommandExecutor exec(engine);
+        exec.run(cmds);
+
+        std::cout << "[cmd] selection=" << engine.programmer().selection().size()
+                  << " edits=" << engine.programmer().edits().size();
+        if (auto g2 = engine.stored().groups().get(2))
+            std::cout << " group2.fids=" << g2->fids().size();
+        std::cout << "\n";
+    }
+
+    // ---- full pipeline: parse text -> AST -> execute ------------------------
+    {
+        Commands::CommandParser parser(
+            "include/LightEngine/Commands/data/commands.txt",
+            "include/LightEngine/Commands/data/commands.syn");
+        Commands::CommandExecutor exec(engine);
+
+        for (const char *line : {"clear", "1 thru 4 + 7 - 2", "at 50",
+                                 "store group 3"})
+        {
+            auto prog = parser.parse(line);
+            exec.run(prog);
+            std::cout << "[parse] \"" << line << "\" -> cmds=" << prog.size()
+                      << " selection="
+                      << engine.programmer().selection().size() << "\n";
+        }
+        if (auto g3 = engine.stored().groups().get(3))
+            std::cout << "[parse] group3.fids=" << g3->fids().size() << "\n";
+    }
+
+    // ---- accumulate across selections: a subset + a stray fixture ----------
+    {
+        engine.clear();
+        engine.programmer().select({1, 2, 3}); // first selection
+        prog.fanColor(0.f, 240.f);
+        engine.programmer().select({50});       // replaces selection; edits persist
+        prog.setColor(Utils::Colors::HSV(300.f, 1.f, 1.f));
+        engine.storeColorPreset(5);             // should hold 3 + 1 = 4
+
+        std::cout << "[accum] selection=" << engine.programmer().selection().size()
+                  << " preset5.size=" << engine.stored().colorPresets().get(5)->size()
+                  << "\n";
+    }
 
     // output: stream sACN from this machine's primary interface
     const Utils::Network::IP ip = Utils::Network::Interfaces::primaryIP();
