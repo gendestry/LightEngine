@@ -4,6 +4,108 @@
 
 namespace LightEngine::Engine
 {
+Engine::Engine() : m_programmer(m_patch) {} // m_patch declared first -> safe
+
+// ---- patching ----
+std::vector<uint16_t> Engine::patch(const Fixtures::Fixture &fixture,
+                                    uint16_t universe, uint16_t amount,
+                                    std::optional<uint32_t> start,
+                                    std::optional<uint16_t> startFID)
+{
+    return m_patch.patch(fixture, universe, amount, start, startFID);
+}
+
+// ---- programmer ----
+void Engine::clear() { m_programmer.clearAll(); }
+
+void Engine::selectGroup(uint32_t num)
+{
+    if (auto grp = m_stored.groups().get(num))
+        m_programmer.select(grp->fixtureGroup());
+}
+
+Pools::Group &Engine::storeGroup(uint32_t num)
+{
+    return m_stored.groups().emplaceAt(num,
+                                       m_programmer.selection().fixtures());
+}
+
+Pools::Group &Engine::storeGroup()
+{
+    return m_stored.groups().emplace(m_programmer.selection().fixtures());
+}
+
+// ---- color presets ----
+Pools::ColorPreset &Engine::storeColorPreset(uint32_t num)
+{
+    auto preset = std::make_shared<Pools::ColorPreset>();
+    const auto &edits = m_programmer.edits();
+    for (const auto &f : m_programmer.selection().fixtures())
+    {
+        const auto it = edits.find(f->Fid());
+        if (it != edits.end() && it->second.color)
+            preset->set(f->Fid(), {it->second.color->h, it->second.color->s});
+    }
+    return m_stored.colorPresets().store(num, std::move(preset));
+}
+
+void Engine::recallColorPreset(uint32_t num)
+{
+    if (auto preset = m_stored.colorPresets().get(num))
+        preset->recall(m_programmer, m_programmer.selection());
+}
+
+// ---- dimmer presets ----
+Pools::DimmerPreset &Engine::storeDimmerPreset(uint32_t num)
+{
+    auto preset = std::make_shared<Pools::DimmerPreset>();
+    const auto &edits = m_programmer.edits();
+    for (const auto &f : m_programmer.selection().fixtures())
+    {
+        const auto it = edits.find(f->Fid());
+        if (it != edits.end() && it->second.color)
+            preset->set(f->Fid(), it->second.color->v);
+    }
+    return m_stored.dimmerPresets().store(num, std::move(preset));
+}
+
+void Engine::recallDimmerPreset(uint32_t num)
+{
+    if (auto preset = m_stored.dimmerPresets().get(num))
+        preset->recall(m_programmer, m_programmer.selection());
+}
+
+// ---- lookup ----
+std::shared_ptr<Fixtures::Fixture> Engine::getFixture(uint16_t fid)
+{
+    return m_patch.getFixture(fid);
+}
+
+DMX::Universe *Engine::getUniverse(uint16_t universe)
+{
+    return m_patch.getUniverse(universe);
+}
+
+// ---- output ----
+void Engine::setIP(const std::string &ip)
+{
+    m_output.setIP(ip);
+    m_outputEnabled = true;
+}
+
+void Engine::setIP(const Utils::Network::IP &ip)
+{
+    m_output.setIP(ip);
+    m_outputEnabled = true;
+}
+
+void Engine::setSourceName(const std::string &name)
+{
+    m_output.setSourceName(name);
+}
+
+std::string Engine::describe() const { return m_patch.describe(); }
+
 void Engine::update(float dt)
 {
     // advance the frame clock before composing, so every layer samples a
