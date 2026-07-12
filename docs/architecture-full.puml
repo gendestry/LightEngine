@@ -1,0 +1,448 @@
+@startuml LightEngine-full
+title LightEngine — Full Class Reference (patch → select → program → store → render → output → command)
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam linetype ortho
+hide empty members
+left to right direction
+
+' =====================================================================
+' GDTF — immutable fixture definitions (flyweights, shared)
+' =====================================================================
+package GDTF {
+    enum Attribute {
+        DIMMER
+        VDIMMER
+        COLOR_R
+        COLOR_G
+        COLOR_B
+        COLOR_W
+    }
+    class DMXChannel {
+        + address : uint
+        + resolution : uint
+    }
+    class ChannelFunction {
+        + range_physical : Range
+        + range_dmx : Range
+    }
+    class LogicalChannel {
+        + attribute : Attribute
+        + channel : DMXChannel
+        + functions : vector<ChannelFunction>
+    }
+    LogicalChannel *-- DMXChannel
+    LogicalChannel *-- "many" ChannelFunction
+    LogicalChannel --> Attribute
+}
+
+' =====================================================================
+' Fixtures — one patched light + its runtime views
+' =====================================================================
+package Fixtures {
+    class Parameter {
+        - m_def : shared_ptr<const LogicalChannel>
+        - m_bytes : uint8*
+        - m_baseOffset : uint32
+        - m_cellIndex : uint16
+        + SetDefinition(def) / SetBuffer(b) / SetBaseOffset(o) / SetCellIndex(c)
+        + Attribute() : Attribute
+        + Is(Attribute) : bool
+        + Bound() : bool
+        + Write(value : float)          << float -> DMX bytes
+    }
+    Parameter ..> LogicalChannel : flyweight
+
+    class ColorCell {
+        - m_r/m_g/m_b/m_w : Parameter*
+        - m_dimmer : Parameter*
+        - m_hsv : HSV
+        + SetComponent(Attribute, Parameter*)
+        + SetColor(HSV) / SetHueSat(h,s) / SetIntensity(v)
+        + IsEmpty() : bool
+        + Resolve()                     << HSV -> RGB(+virtual dimmer) -> Write
+    }
+    ColorCell o-- Parameter : views
+
+    class Fixture {
+        - m_name : string
+        - m_fid : uint16
+        - m_universe : uint16
+        - m_buffer : uint8*  (non-owning)
+        - m_parameters : vector<Parameter>
+        - m_byAttribute : map<Attribute, vector<Parameter*>>
+        - m_colorCells : vector<ColorCell>
+        + Add(def, cellIndex) : Parameter&
+        + Build()
+        + setStart(uint32) / setBuffer(uint8*) / Bind(buf,start)
+        + Has(Attribute) : bool
+        + Cell(i) : ColorCell& / ColorCells() / CellCount()
+        + Resolve(FixtureValues)        << stateless sink
+        + Name()/Fid()/SetFid()/Universe()/SetUniverse()/Footprint()
+        + Parameters() / ByAttribute()
+    }
+    Fixture *-- "many" Parameter
+    Fixture *-- "many" ColorCell
+    note bottom of Fixture : IS-A Utils::Fragment (packable in a Universe)
+}
+
+' =====================================================================
+' DMX — physical universes + transient selections
+' =====================================================================
+package DMX {
+    class Universe {
+        - m_id : uint16
+        - m_buffer : array<uint8,512>
+        - m_byName : map<string, vector<Fixture>>
+        + addFixture(fixture[, start]) : Fixture
+        + addFixtures(fixture, count, start) : vector<Fixture>
+        + fixtures() : list<Fixture>
+        + at(i) / byName(name) / fixtureCount()
+        + buffer() : array<uint8,512>&
+        + blackout()
+        + describe() / dump(channels)
+        + id() / setId()
+    }
+    note top of Universe : IS-A FragmentedStorage<Fixture,512>\nowns the DMX byte buffer + packing
+    Universe o-- "owns (shared_ptr)" Fixture
+
+    class FixtureGroup {
+        - m_name : string
+        - m_fixtures : vector<Fixture>   (shared, NON-owning)
+        - m_usedUniverses : set<uint16>
+        - m_byAttribute : map<Attribute, vector<Parameter*>>  (cache)
+        - m_colorCells : vector<ColorCell*>  (cache)
+        + add(Fixture|vector|FixtureGroup) / clear()
+        + fixtures() / fids() / size() / empty() / contains()
+        + usedUniverses()
+        + parameters(Attribute) / has(Attribute) / colorCells()   << lazy cache
+        + operator+= / describe()
+    }
+    FixtureGroup o-- "refs" Fixture
+}
+
+' =====================================================================
+' Engine — composition & render core
+' =====================================================================
+package Engine {
+
+    struct TimeContext {
+        + now : double
+        + dt : float
+        + frame : uint64
+    }
+
+    enum MergePolicy {
+        HTP
+        LTP
+    }
+    struct FixtureValues {
+        + color : optional<HSV>    ' hue/sat + intensity (V) — not yet split
+        + generic : map<Attribute, float>
+    }
+    class Frame {
+        - m_values : map<uint16, FixtureValues>
+        + clear()
+        + contribute(fid, FixtureValues, MergePolicy)
+        + get(fid) : FixtureValues*
+        + all() : map<uint16, FixtureValues>&
+    }
+    Frame o-- FixtureValues
+    FixtureValues ..> MergePolicy
+
+    class Patch {
+        - m_universes : map<uint16, Universe>
+        - m_fixtures : map<uint16, Fixture>
+        - m_byName : map<string, vector<Fixture>>
+        - m_usedFids : set<uint16>
+        - m_dirty : set<uint16>
+        + patch(fixture, universe, amount, start?, startFID?) : vector<uint16>
+        + getUniverse(u) / universes()
+        + getFixture(fid) / getFixtures(fids) / getFixturesByName(name) / fixtures()
+        + blackout()
+        + dirtyUniverses() / markDirty(u) / clearDirty()
+        + describe()
+    }
+    Patch o-- Universe
+    Patch o-- "index by fid" Fixture
+
+    abstract class Layer {
+        + {abstract} priority() : int
+        + enabled() : bool
+        + {abstract} apply(Frame&, TimeContext&)
+    }
+    class ProgrammerLayer {
+        - m_patch : Patch&
+        - m_selection : FixtureGroup
+        - m_edits : map<uint16, FixtureValues>
+        - ensureColor(fid) : HSV&
+        + select(FixtureGroup|fids) / add(FixtureGroup|fids) / deselect()
+        + selection() : FixtureGroup&
+        + setColor(HSV) / setHueSat(h,s) / setIntensity(v)
+        + setIntensityRamp(a,b) / fanColor(hueA,hueB,sat)
+        + applyHueSat(fid,h,s) / applyIntensity(fid,v)   << preset recall
+        + edits() : map<uint16,FixtureValues>&
+        + selectedGroup() : FixtureGroup
+        + clearValues() / clearAll()
+        + priority()=1000 / apply()
+    }
+    Layer <|-- ProgrammerLayer
+    ProgrammerLayer *-- FixtureGroup
+    ProgrammerLayer o-- FixtureValues
+    ProgrammerLayer ..> Patch : resolves FIDs
+
+    class DMXOutput {
+        - m_ip : IP
+        - m_sourceName : string
+        - m_senders : map<uint16, SacnSender>
+        + setIP() / setSourceName()
+        + send(Universe) / sendAll(Patch)
+    }
+    DMXOutput ..> Universe : reads buffer
+    DMXOutput ..> Patch : dirty set
+
+    class Engine {
+        - m_patch : Patch
+        - m_time : TimeContext
+        - m_output : DMXOutput
+        - m_outputEnabled : bool
+        - m_frame : Frame
+        - m_programmer : ProgrammerLayer
+        - m_layers : vector<Layer*>
+        - m_stored : Stored
+        - m_parser : unique_ptr<CommandParser>    << fwd-declared, hidden
+        - m_exec : unique_ptr<CommandExecutor>     << fwd-declared, hidden
+        --
+        + Engine() / ~Engine()
+        + patch(fixture, universe, amount, start?, startFID?) : vector<uint16>
+        + stored() : Stored&
+        + loadCommands(tokensFile, grammarFile) / command(line) : bool
+        + clear()
+        + selectGroup(num) / storeGroup(num) / storeGroup()
+        + storeColorPreset(num) / recallColorPreset(num)
+        + storeDimmerPreset(num) / recallDimmerPreset(num)
+        + getFixture(fid) / getUniverse(u) / patcher() : Patch&
+        + update(dt)
+        + setIP() / setSourceName() / output() : DMXOutput&
+        + frame() : Frame& / values(fid) : FixtureValues*
+        + programmer() : ProgrammerLayer& / addLayer(Layer*)
+        + time() / describe()
+    }
+    Engine *-- Patch
+    Engine *-- Frame
+    Engine *-- DMXOutput
+    Engine *-- TimeContext
+    Engine *-- ProgrammerLayer
+    Engine o-- "composes low->high" Layer
+    Engine *-- Stored
+
+    ' =================================================================
+    ' Engine::Pools — the show's numbered object storage
+    ' =================================================================
+    package Pools {
+        abstract class PoolObject {
+            - m_number : uint32
+            - m_name : string
+            # setNumber(n)   << friend Pool
+            + number() / name() / setName(n)
+            + {abstract} describe() : string
+        }
+
+        class "Pool<T : PoolObject>" as Pool {
+            - m_items : map<uint32, shared_ptr<T>>
+            - m_byName : map<string, uint32>
+            - index(name,num) / unindex(name)
+            + store(num?, obj) / emplace / emplaceAt
+            + get(num) / get(name) / contains(num)
+            + rename(num, name)
+            + remove(num) / clear() / move(from,to)
+            + nextFree()
+            + size() / empty() / begin() / end() / items()
+            + describe()
+        }
+        Pool o-- PoolObject
+
+        class Group {
+            - m_fg : FixtureGroup
+            + fixtureGroup() : FixtureGroup&
+            + add(fixtures) / fids()
+            + describe()
+        }
+        PoolObject <|-- Group
+        Group *-- FixtureGroup
+
+        enum PresetType {
+            DIMMER
+            COLOR
+        }
+        abstract class PresetBase {
+            - m_type : PresetType
+            + type() : PresetType
+            + {abstract} recall(ProgrammerLayer&, FixtureGroup&)
+        }
+        PoolObject <|-- PresetBase
+        PresetBase ..> PresetType
+
+        struct HueSat {
+            + h : float
+            + s : float
+        }
+        class "Preset<T>" as Preset {
+            - m_values : map<uint16, T>
+            + set(fid, v) / clear()
+            + appliesTo(fid) / values() / size()
+            + describe()
+        }
+        PresetBase <|-- Preset
+
+        class ColorPreset {
+            + recall(...)   << applyHueSat
+        }
+        class DimmerPreset {
+            + recall(...)   << applyIntensity
+        }
+        Preset <|-- ColorPreset
+        Preset <|-- DimmerPreset
+        ColorPreset ..> HueSat
+        PresetBase ..> ProgrammerLayer : recall drives
+
+        class Stored {
+            - m_groups : Pool<Group>
+            - m_colorPresets : Pool<ColorPreset>
+            - m_dimmerPresets : Pool<DimmerPreset>
+            - section(label, pool) : string
+            + groups() / colorPresets() / dimmerPresets()
+            + clear() / describe()
+        }
+        Stored *-- Pool
+    }
+}
+
+' =====================================================================
+' Commands — text -> AST -> actions (owned by Engine, internal)
+' =====================================================================
+package Commands {
+
+    ' ---- generated typed AST (Macros::) ----
+    package "ast (Macros)" as AstNs {
+        abstract class Selector {
+            + {abstract} accept(SelectorVisitor&)
+        }
+        class "Fixture" as Fixture_ {
+            + id : i64
+        }
+        class FixtureRange {
+            + from : i64
+            + to : i64
+        }
+        class "Group" as Group_ {
+            + id : i64
+        }
+        class "Preset" as Preset_ {
+            + bank : i64
+            + number : i64
+        }
+        Selector <|-- Fixture_
+        Selector <|-- FixtureRange
+        Selector <|-- Group_
+        Selector <|-- Preset_
+
+        struct AtValue {
+            + isPreset : bool
+            + level : f64
+            + preset : SelectorPtr
+        }
+        struct Item {
+            + op : string
+            + sel : SelectorPtr
+        }
+
+        abstract class Command {
+            + {abstract} accept(CommandVisitor&)
+        }
+        class SelectCmd {
+            + items : Item[]
+            + hasAt : bool
+            + at : AtValue
+        }
+        class StoreCmd {
+            + target : SelectorPtr
+        }
+        class DeleteCmd {
+            + target : SelectorPtr
+        }
+        class ClearCmd
+        class AtCmd {
+            + at : AtValue
+        }
+        Command <|-- SelectCmd
+        Command <|-- StoreCmd
+        Command <|-- DeleteCmd
+        Command <|-- ClearCmd
+        Command <|-- AtCmd
+        SelectCmd *-- Item
+        Item o-- Selector
+        AtValue o-- Selector
+
+        interface CommandVisitor {
+            + visit(SelectCmd&) / visit(StoreCmd&) / visit(DeleteCmd&)
+            + visit(ClearCmd&) / visit(AtCmd&)
+        }
+        interface SelectorVisitor {
+            + visit(Fixture&) / visit(FixtureRange&)
+            + visit(Group&) / visit(Preset&)
+        }
+    }
+
+    class AstBuilder {
+        + build(Node&) : Program           << CST -> typed AST
+        - buildCommand(Node&) : CommandPtr
+        - buildItems(Node&) : Item[]
+        - buildAtValue(Node&) : AtValue
+        - buildSelector/Fixsel/Grpsel/Presetsel(Node&) : SelectorPtr
+    }
+    class CommandParser {
+        - m_grammar : Grammar
+        - m_tokensFile : string
+        + parse(line) : Program             << text -> tokens -> CST -> AST
+    }
+    class CommandExecutor {
+        - m_engine : Engine&
+        + run(Program&)
+        + visit(SelectCmd&/StoreCmd&/DeleteCmd&/ClearCmd&/AtCmd&)
+        - expand(Selector&) : vector<uint16>
+        - resolveSelection(SelectCmd&) : vector<uint16>
+        - applyAt(AtValue&)
+        - presetKind(bank) : PresetKind
+    }
+    CommandVisitor <|.. CommandExecutor
+    CommandParser ..> AstBuilder : uses
+    AstBuilder ..> Command : builds
+    CommandParser ..> Command : returns Program
+    CommandExecutor ..> Command : visits
+    CommandExecutor ..> Engine : drives facade
+}
+
+Engine ..> CommandParser : owns (pimpl)
+Engine ..> CommandExecutor : owns (pimpl)
+CommandParser ..> "Parsing::Syntax (GrammarParser / Engine / Node)" : lexes+parses
+
+' =====================================================================
+' Data-flow notes
+' =====================================================================
+note as N1
+  **update(dt):**  advance clock -> Frame.clear ->
+  each Layer.apply() low->high (ProgrammerLayer LTP @1000)
+  -> Fixture.Resolve(Frame.get(fid)) -> DMX buffer
+  -> DMXOutput.sendAll(Patch) [if IP set]
+end note
+N1 .. Engine
+
+note as N2
+  **command(line):**  Engine -> CommandParser.parse
+  -> Program -> CommandExecutor.run -> Engine facade
+end note
+N2 .. Commands
+
+@enduml

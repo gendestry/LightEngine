@@ -115,6 +115,16 @@ public:
     void setSourceName(const std::string &name);
     [[nodiscard]] DMXOutput &output() { return m_output; }
 
+    // ---- composed output (read-only, for UIs) ----
+    // The merged per-frame values after all layers compose - i.e. what is
+    // actually on stage. Valid after update(). Prefer this over programmer
+    // edits() for display, since it reflects every layer, not just the user's.
+    [[nodiscard]] const Frame &frame() const { return m_frame; }
+    [[nodiscard]] const FixtureValues *values(uint16_t fid) const
+    {
+        return m_frame.get(fid);
+    }
+
     // ---- layers ----
     [[nodiscard]] ProgrammerLayer &programmer() { return m_programmer; }
     void addLayer(Layer *layer) { m_layers.push_back(layer); }
