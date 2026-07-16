@@ -43,8 +43,32 @@ int main()
     prog.add(fids10);
     engine.storeGroup(1);
     engine.stored().groups().rename(1, "all");
-    prog.setIntensity(0.5f);
+    // prog.setIntensity(0.5f);
+
     prog.clearAll();
+    prog.select(fids8);
+    engine.storeGroup(2);
+    engine.stored().groups().rename(2, "pojstla-top");
+    prog.clearAll();
+    prog.select(fids9);
+    engine.storeGroup(3);
+    engine.stored().groups().rename(3, "pojstla-side");
+    prog.clearAll();
+    prog.select(fids10);
+    engine.storeGroup(4);
+    engine.stored().groups().rename(4, "miza");
+    prog.clearAll();
+
+    engine.selectGroup(2);
+    prog.setIntensity(1.f);
+    prog.setColor(Utils::Colors::HSV(0, 1.f, 1.f));
+    engine.selectGroup(3);
+    prog.setIntensity(0.5f);
+    prog.setColor(Utils::Colors::HSV(0, 0.f, 1.f));
+    engine.selectGroup(4);
+    prog.setIntensity(0.f);
+    prog.setColor(Utils::Colors::HSV(0, 0.f, 1.f));
+    // prog.setColor({0, })
 
     // // fan hue red->blue across the selection, full intensity, then bank it
     // as
@@ -170,6 +194,10 @@ int main()
     // render one frame and show the resulting DMX for universe 8
     engine.update();
     if (DMX::Universe *u = engine.getUniverse(8))
+        std::cout << u->dump() << "\n";
+    if (DMX::Universe *u = engine.getUniverse(9))
+        std::cout << u->dump() << "\n";
+    if (DMX::Universe *u = engine.getUniverse(10))
         std::cout << u->dump() << "\n";
 
     std::cout << "Streaming sACN from " << ip.str()

@@ -4,7 +4,7 @@
 #include <string>
 
 #include "LightEngine/DMX/FixtureGroup.h"
-#include "LightEngine/Engine/Layer.h"
+#include "LightEngine/Engine/Programmer.h"
 #include "LightEngine/Engine/Pools/PoolObject.h"
 
 //

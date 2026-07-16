@@ -12,6 +12,7 @@
 #include "LightEngine/Engine/Frame.h"
 #include "LightEngine/Engine/Layer.h"
 #include "LightEngine/Engine/Patch.h"
+#include "LightEngine/Engine/Programmer.h"
 #include "LightEngine/Engine/Pools/Stored.h"
 #include "LightEngine/Engine/TimeContext.h"
 // #include "LightEngine/Show/Sequence.h"      // TODO: playback / cues
