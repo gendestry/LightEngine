@@ -1,0 +1,39 @@
+@startuml classes-pools
+title Stored objects (pools & presets)
+
+class PoolObject {
+    -uint32 number
+    -string name
+    +describe() string
+}
+class "Pool<T>" as PoolT {
+    -map<uint32,PtrT> items
+    -map<string,uint32> byName
+    +store(num, obj) T
+    +get(num) PtrT
+    +move(from, to) bool
+    +nextFree() uint32
+}
+class Group {
+    -FixtureGroup fg
+    +fids() vector<uint16>
+}
+abstract class PresetBase {
+    +PresetType type
+    +recall(prog, selection) void
+}
+class "Preset<T>" as PresetT {
+    -map<FID,T> values
+    +set(fid, v) void
+    +appliesTo(fid) bool
+}
+class ColorPreset
+class DimmerPreset
+
+PoolObject <|-- Group
+PoolObject <|-- PresetBase
+PresetBase <|-- PresetT
+PresetT <|-- ColorPreset
+PresetT <|-- DimmerPreset
+PoolT o-- PoolObject : holds shared_ptr
+@enduml

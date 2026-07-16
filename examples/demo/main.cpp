@@ -14,15 +14,21 @@ using namespace LightEngine;
 using Fixtures::Fixture;
 using GDTF::Attribute;
 
+// Absolute data dir baked in by CMake; falls back to a repo-root-relative path
+// if built some other way.
+#ifndef LE_DATA_DIR
+#define LE_DATA_DIR "include/LightEngine/Commands/data"
+#endif
+
 int main()
 {
     Engine::Engine engine;
 
     // a simple 3-channel RGB fixture, built with the 8-bit FixtureBuilder
-    Fixture rgb = Engine::FixtureBuilder(
-                      "RGB", {Attribute::COLOR_R, Attribute::COLOR_G,
-                              Attribute::COLOR_B})
-                      .Get();
+    Fixture rgb =
+        Engine::FixtureBuilder(
+            "RGB", {Attribute::COLOR_R, Attribute::COLOR_G, Attribute::COLOR_B})
+            .Get();
 
     // RGB fixtures (3 channels each) across three universes.
     auto fids8 = engine.patch(rgb, 8, 93);
@@ -37,114 +43,124 @@ int main()
     prog.add(fids10);
     engine.storeGroup(1);
     engine.stored().groups().rename(1, "all");
+    prog.setIntensity(0.5f);
+    prog.clearAll();
 
-    // fan hue red->blue across the selection, full intensity, then bank it as
-    // color preset 1 and dimmer preset 1.
-    prog.fanColor(0.f, 240.f);   // hue 0 (red) .. 240 (blue)
-    prog.setIntensityRamp(0.25f, 1.f);
-    engine.storeColorPreset(1);
-    engine.stored().colorPresets().rename(1, "Rainbow");
-    engine.storeDimmerPreset(1);
-    engine.stored().dimmerPresets().rename(1, "Ramp");
+    // // fan hue red->blue across the selection, full intensity, then bank it
+    // as
+    // // color preset 1 and dimmer preset 1.
+    // prog.fanColor(0.f, 240.f); // hue 0 (red) .. 240 (blue)
+    // prog.setIntensityRamp(0.25f, 1.f);
+    // engine.storeColorPreset(1);
+    // engine.stored().colorPresets().rename(1, "Rainbow");
+    // engine.storeDimmerPreset(1);
+    // engine.stored().dimmerPresets().rename(1, "Ramp");
 
-    // ---- functional test ----------------------------------------------------
-    auto probe = [&](const char *label) {
-        engine.update();
-        const auto *v = engine.programmer().edits().empty()
-                            ? nullptr
-                            : &engine.programmer().edits().begin()->second;
-        std::cout << label << ": edits=" << engine.programmer().edits().size();
-        if (v && v->color)
-            std::cout << " fid" << engine.programmer().edits().begin()->first
-                      << " h=" << v->color->h << " s=" << v->color->s
-                      << " v=" << v->color->v;
-        std::cout << "\n";
-    };
+    // // ---- functional test
+    // ---------------------------------------------------- auto probe =
+    // [&](const char *label)
+    // {
+    //     engine.update();
+    //     const auto *v = engine.programmer().edits().empty()
+    //                         ? nullptr
+    //                         : &engine.programmer().edits().begin()->second;
+    //     std::cout << label << ": edits=" <<
+    //     engine.programmer().edits().size(); if (v && v->color)
+    //         std::cout << " fid" << engine.programmer().edits().begin()->first
+    //                   << " h=" << v->color->h << " s=" << v->color->s
+    //                   << " v=" << v->color->v;
+    //     std::cout << "\n";
+    // };
 
-    probe("after fan+ramp");
+    // probe("after fan+ramp");
 
-    // clear, then recall both presets onto a fresh selection of the group
-    engine.clear();
-    probe("after clear");                 // expect edits=0
+    // // clear, then recall both presets onto a fresh selection of the group
+    // engine.clear();
+    // probe("after clear"); // expect edits=0
 
-    engine.selectGroup(1);
-    engine.recallColorPreset(1);
-    engine.recallDimmerPreset(1);
-    probe("after recall color+dimmer");   // expect edits back, h/s/v set
+    // engine.selectGroup(1);
+    // engine.recallColorPreset(1);
+    // engine.recallDimmerPreset(1);
+    // probe("after recall color+dimmer"); // expect edits back, h/s/v set
 
-    std::cout << engine.stored().describe() << "\n";
+    // std::cout << engine.stored().describe() << "\n";
 
-    // ---- command executor test (hand-built AST) -----------------------------
-    // Equivalent command line:  clear ; 1 thru 6 at 100 ; store group 2
-    {
-        using namespace Macros;
-        Program cmds;
+    // // ---- command executor test (hand-built AST)
+    // -----------------------------
+    // // Equivalent command line:  clear ; 1 thru 6 at 100 ; store group 2
+    // {
+    //     using namespace Macros;
+    //     Program cmds;
 
-        auto clr = std::make_unique<ClearCmd>();
-        cmds.push_back(std::move(clr));
+    //     auto clr = std::make_unique<ClearCmd>();
+    //     cmds.push_back(std::move(clr));
 
-        auto sc = std::make_unique<SelectCmd>();
-        Item item;
-        item.op = "";
-        auto range = std::make_unique<FixtureRange>();
-        range->from = 1;
-        range->to = 6;
-        item.sel = std::move(range);
-        sc->items.push_back(std::move(item));
-        sc->hasAt = true;
-        sc->at.isPreset = false;
-        sc->at.level = 100;
-        cmds.push_back(std::move(sc));
+    //     auto sc = std::make_unique<SelectCmd>();
+    //     Item item;
+    //     item.op = "";
+    //     auto range = std::make_unique<FixtureRange>();
+    //     range->from = 1;
+    //     range->to = 6;
+    //     item.sel = std::move(range);
+    //     sc->items.push_back(std::move(item));
+    //     sc->hasAt = true;
+    //     sc->at.kind = "level";
+    //     sc->at.level = 100;
+    //     cmds.push_back(std::move(sc));
 
-        auto store = std::make_unique<StoreCmd>();
-        auto grp = std::make_unique<Group>();
-        grp->id = 2;
-        store->target = std::move(grp);
-        cmds.push_back(std::move(store));
+    //     auto store = std::make_unique<StoreCmd>();
+    //     auto grp = std::make_unique<Group>();
+    //     grp->id = 2;
+    //     store->target = std::move(grp);
+    //     cmds.push_back(std::move(store));
 
-        Commands::CommandExecutor exec(engine);
-        exec.run(cmds);
+    //     Commands::CommandExecutor exec(engine);
+    //     exec.run(cmds);
 
-        std::cout << "[cmd] selection=" << engine.programmer().selection().size()
-                  << " edits=" << engine.programmer().edits().size();
-        if (auto g2 = engine.stored().groups().get(2))
-            std::cout << " group2.fids=" << g2->fids().size();
-        std::cout << "\n";
-    }
+    //     std::cout << "[cmd] selection="
+    //               << engine.programmer().selection().size()
+    //               << " edits=" << engine.programmer().edits().size();
+    //     if (auto g2 = engine.stored().groups().get(2))
+    //         std::cout << " group2.fids=" << g2->fids().size();
+    //     std::cout << "\n";
+    // }
 
-    // ---- full pipeline: parse text -> AST -> execute ------------------------
-    {
-        Commands::CommandParser parser(
-            "include/LightEngine/Commands/data/commands.txt",
-            "include/LightEngine/Commands/data/commands.syn");
-        Commands::CommandExecutor exec(engine);
+    // // ---- full pipeline: parse text -> AST -> execute
+    // ------------------------
+    // {
+    //     Commands::CommandParser parser(LE_DATA_DIR "/commands.txt",
+    //                                    LE_DATA_DIR "/commands.syn");
+    //     Commands::CommandExecutor exec(engine);
 
-        for (const char *line : {"clear", "1 thru 4 + 7 - 2", "at 50",
-                                 "store group 3"})
-        {
-            auto prog = parser.parse(line);
-            exec.run(prog);
-            std::cout << "[parse] \"" << line << "\" -> cmds=" << prog.size()
-                      << " selection="
-                      << engine.programmer().selection().size() << "\n";
-        }
-        if (auto g3 = engine.stored().groups().get(3))
-            std::cout << "[parse] group3.fids=" << g3->fids().size() << "\n";
-    }
+    //     for (const char *line :
+    //          {"clear", "1 thru 4 + 7 - 2", "at 50", "store group 3"})
+    //     {
+    //         auto prog = parser.parse(line);
+    //         exec.run(prog);
+    //         std::cout << "[parse] \"" << line << "\" -> cmds=" << prog.size()
+    //                   << " selection=" <<
+    //                   engine.programmer().selection().size()
+    //                   << "\n";
+    //     }
+    //     if (auto g3 = engine.stored().groups().get(3))
+    //         std::cout << "[parse] group3.fids=" << g3->fids().size() << "\n";
+    // }
 
-    // ---- accumulate across selections: a subset + a stray fixture ----------
-    {
-        engine.clear();
-        engine.programmer().select({1, 2, 3}); // first selection
-        prog.fanColor(0.f, 240.f);
-        engine.programmer().select({50});       // replaces selection; edits persist
-        prog.setColor(Utils::Colors::HSV(300.f, 1.f, 1.f));
-        engine.storeColorPreset(5);             // should hold 3 + 1 = 4
+    // // ---- accumulate across selections: a subset + a stray fixture
+    // ----------
+    // {
+    //     engine.clear();
+    //     engine.programmer().select({1, 2, 3}); // first selection
+    //     prog.fanColor(0.f, 240.f);
+    //     engine.programmer().select({50}); // replaces selection; edits
+    //     persist prog.setColor(Utils::Colors::HSV(300.f, 1.f, 1.f));
+    //     engine.storeColorPreset(5); // should hold 3 + 1 = 4
 
-        std::cout << "[accum] selection=" << engine.programmer().selection().size()
-                  << " preset5.size=" << engine.stored().colorPresets().get(5)->size()
-                  << "\n";
-    }
+    //     std::cout << "[accum] selection="
+    //               << engine.programmer().selection().size() << "
+    //               preset5.size="
+    //               << engine.stored().colorPresets().get(5)->size() << "\n";
+    // }
 
     // output: stream sACN from this machine's primary interface
     const Utils::Network::IP ip = Utils::Network::Interfaces::primaryIP();

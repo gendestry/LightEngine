@@ -4,8 +4,11 @@ title LightEngine — Full Class Reference (patch → select → program → sto
 skinparam classAttributeIconSize 0
 skinparam packageStyle rectangle
 skinparam linetype ortho
+skinparam nodesep 25
+skinparam ranksep 40
 hide empty members
-left to right direction
+' NOTE: default top-to-bottom layout. 'left to right direction' makes this
+' 50-class diagram absurdly wide and it gets clipped at the renderer's size cap.
 
 ' =====================================================================
 ' GDTF — immutable fixture definitions (flyweights, shared)

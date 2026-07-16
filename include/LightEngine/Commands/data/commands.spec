@@ -1,6 +1,6 @@
 # =============================================================================
-#  ast.spec — AST for the fixture/group command grammar (lang.syn).
-#  Consumed by gen_ast.py -> Ast.gen.h.
+#  commands.spec — AST for the fixture/group command grammar (commands.syn).
+#  Consumed by gen_ast.py -> commands_ast.h.
 #
 #    entry     : command+                           -> a sequence of Command
 #    command   : selection at? | store | delete
@@ -10,11 +10,13 @@
 #    modsel    : grpsel | presetsel                 -> Group|Preset
 #    fixsel    : NUM (THRU NUM)?
 #    grpsel    : GROUP NUM
-#    presetsel : PRESET NUM DOT NUM
+#    presetsel : PRESET (DIMMER | COLOR) NUM
 #    store     : STORE modsel
 #    delete    : DELETE modsel
 #    clear     : CLEAR
-#    at        : AT (NUM | presetsel)
+#    atdim     : NUM
+#    atcolor   : COLOR NUM COMMA NUM COMMA NUM
+#    at        : AT (atdim | atcolor | presetsel)
 # =============================================================================
 
 namespace Macros
@@ -24,18 +26,23 @@ program Command[]
 
 # ---- category: the selectable / addressable objects ----------------------
 category Selector {
-    Fixture      { i64 id }               # fixsel single    e.g. 13
-    FixtureRange { i64 from; i64 to }      # fixsel range     e.g. 1 thru 10
-    Group        { i64 id }               # grpsel           e.g. group 4
-    Preset       { i64 bank; i64 number } # presetsel        e.g. preset 2.5
+    Fixture      { i64 id }                # fixsel single    e.g. 13
+    FixtureRange { i64 from; i64 to }       # fixsel range     e.g. 1 thru 10
+    Group        { i64 id }                # grpsel           e.g. group 4
+    Preset       { string kind; i64 number } # presetsel      e.g. preset color 5
 }
 
 # ---- record: the value an 'at' applies -----------------------------------
-#   at NUM        -> isPreset = false, level holds the number
-#   at preset a.b -> isPreset = true,  preset holds a Preset
+#   kind determines which field carries the payload:
+#     "level"  -> at NUM               level holds the number      (atdim)
+#     "color"  -> at color r,g,b       r/g/b hold the components   (atcolor)
+#     "preset" -> at preset (d|c) N    preset holds a Preset       (presetsel)
 record AtValue {
-    bool     isPreset
+    string   kind
     f64      level
+    i64      r
+    i64      g
+    i64      b
     Selector preset
 }
 

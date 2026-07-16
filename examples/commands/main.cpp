@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 #include <string>
 
@@ -8,6 +9,12 @@
 using namespace LightEngine;
 using Fixtures::Fixture;
 using GDTF::Attribute;
+
+// Absolute data dir baked in by CMake; falls back to a repo-root-relative path
+// if built some other way.
+#ifndef LE_DATA_DIR
+#define LE_DATA_DIR "include/LightEngine/Commands/data"
+#endif
 
 // Run the command pipeline against a simple patch:
 //   text -> CommandParser -> AST -> CommandExecutor -> Engine
@@ -24,10 +31,10 @@ int main()
     engine.patch(rgb, 9, 120);
     engine.patch(rgb, 10, 60); // fids 1..273
 
-    // Load the grammar + token definitions (paths relative to the repo root,
-    // the working directory when run as ./build/LightEngine_commands).
-    engine.loadCommands("include/LightEngine/Commands/data/commands.txt",
-                        "include/LightEngine/Commands/data/commands.syn");
+    // Load the grammar + token definitions (LE_DATA_DIR is an absolute path
+    // baked in at compile time, so this works from any working directory).
+    engine.loadCommands(LE_DATA_DIR "/commands.txt",
+                        LE_DATA_DIR "/commands.syn");
 
     auto &prog = engine.programmer();
 
@@ -45,9 +52,10 @@ int main()
         "    delete group <n>           remove a group\n"
         "    clear                      wipe the programmer\n"
         "  meta commands (not part of the grammar):\n"
-        "    .help     show this help\n"
-        "    .stored   dump the pools\n"
-        "    .quit     exit (or Ctrl+D)\n";
+        "    .help            show this help\n"
+        "    .stored          dump the pools\n"
+        "    .printuniverses  render + dump each universe's DMX buffer\n"
+        "    .quit            exit (or Ctrl+D)\n";
 
     std::cout << help;
 
@@ -70,6 +78,27 @@ int main()
         if (line == ".stored")
         {
             std::cout << engine.stored().describe() << "\n";
+            continue;
+        }
+        if (line == ".printuniverses" || line == ".u")
+        {
+            // Resolve the current programmer state into the DMX buffers so the
+            // dump reflects what would go on the wire.
+            engine.update();
+            const auto &universes = engine.patcher().universes();
+            if (universes.empty())
+                std::cout << "  (no universes patched)\n";
+            for (const auto &[id, uni] : universes)
+            {
+                // Cover every patched channel in this universe (packed dense).
+                std::size_t used = 0;
+                for (const auto &f : uni.fixtures())
+                    used += f->Footprint();
+                const int channels =
+                    static_cast<int>(std::clamp<std::size_t>(used, 16, 512));
+                // dump() already prints a "Universe N (M fixtures)" header.
+                std::cout << uni.dump(channels) << "\n";
+            }
             continue;
         }
 

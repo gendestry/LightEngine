@@ -1,0 +1,27 @@
+@startuml context
+title LightEngine — System Context
+skinparam componentStyle rectangle
+left to right direction
+
+actor "Operator / UI" as user
+component "Command line / REPL" as cli
+
+package "This machine" {
+    [LightEngine\n(static library)] as engine
+    [Utils (submodule)\nColors · Network/SACN\nFragmentedStorage] as utils
+    [NewSyntaxParser (submodule)\nTokenizer + Grammar] as syn
+}
+
+file "GDTF fixture files\n(planned import)" as gdtf
+queue "sACN / E1.31\nUDP multicast" as net
+node "Lighting rig:\ndimmers, LED, movers" as rig
+
+user --> cli
+cli --> engine : text commands
+user --> engine : C++ facade API
+engine --> utils
+engine --> syn
+gdtf ..> engine : planned
+engine --> net : 512-byte universe frames
+net --> rig
+@enduml

@@ -1,0 +1,49 @@
+@startuml classes-fixture
+title Fixture rendering path (GDTF -> Fixture -> DMX)
+left to right direction
+
+class LogicalChannel {
+    +Attribute attribute
+    +DMXChannel channel
+    +vector<ChannelFunction> functions
+}
+class DMXChannel {
+    +uint16 address
+    +Resolution res
+    +MaxDMX() uint16
+}
+class ChannelFunction {
+    +DMXRange range_dmx
+    +PhysicalRange range_physical
+    +Evaluate(dmx) float
+}
+class Parameter {
+    -shared_ptr<LogicalChannel> def
+    -uint8* bytes
+    -uint32 baseOffset
+    -uint16 cellIndex
+    +Write(norm) void
+}
+class ColorCell {
+    -Parameter rgbw
+    -Parameter dimmer
+    -HSV hsv
+    +Resolve() void
+}
+class Fixture {
+    -vector<Parameter> parameters
+    -map<Attribute,Params> byAttribute
+    -vector<ColorCell> colorCells
+    +Add(def, cell) Parameter
+    +Build() void
+    +Resolve(FixtureValues) void
+}
+
+LogicalChannel *-- DMXChannel
+LogicalChannel *-- ChannelFunction
+Parameter ..> LogicalChannel : shares const
+ColorCell o-- Parameter : views
+Fixture *-- Parameter
+Fixture *-- ColorCell
+Fixture ..> LogicalChannel : Add
+@enduml

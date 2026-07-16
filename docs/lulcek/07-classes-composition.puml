@@ -1,0 +1,50 @@
+@startuml classes-composition
+title Composition core (layers, frame, engine)
+
+abstract class Layer {
+    +priority() int
+    +enabled() bool
+    +apply(Frame, Time) void
+}
+class ProgrammerLayer {
+    -FixtureGroup selection
+    -map<FID,FixtureValues> edits
+    +select(group) void
+    +setColor(hsv) void
+    +priority() int
+}
+class Frame {
+    -map<FID,FixtureValues> values
+    +contribute(fid, vals, policy) void
+    +get(fid) ValuesPtr
+    +clear() void
+}
+class FixtureValues {
+    +optional<HSV> color
+    +map<Attribute,float> generic
+}
+enum MergePolicy {
+    HTP
+    LTP
+}
+class Engine {
+    -Patch patch
+    -Frame frame
+    -ProgrammerLayer programmer
+    -vector<LayerPtr> layers
+    -Stored stored
+    -DMXOutput output
+    -TimeContext time
+    +patch(fixture, uni, n)
+    +update(dt) void
+    +command(line) bool
+}
+
+Layer <|-- ProgrammerLayer
+Engine o-- Layer : composes low to high
+Engine *-- Frame
+Engine *-- ProgrammerLayer
+Frame *-- FixtureValues
+Frame ..> MergePolicy
+ProgrammerLayer ..> Frame : apply
+@enduml

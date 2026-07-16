@@ -55,8 +55,11 @@ namespace Macros
     // ---- records (plain structs, not visited) ----
     struct AtValue
     {
-        bool isPreset = false;
+        std::string kind;
         double level = 0;
+        long long r = 0;
+        long long g = 0;
+        long long b = 0;
         SelectorPtr preset;
     };
 
@@ -88,7 +91,7 @@ namespace Macros
 
     struct Preset : Selector
     {
-        long long bank = 0;
+        std::string kind;
         long long number = 0;
         void accept(SelectorVisitor &v) override { v.visit(*this); }
     };

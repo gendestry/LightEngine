@@ -1,0 +1,35 @@
+@startuml ownership
+title Ownership & lifetime (who owns the heap, who only points)
+skinparam componentStyle rectangle
+
+[Engine] as engine
+[Patch] as patch
+[Universe (value in map)] as uni #1b5e20
+[512-byte DMX buffer\nowned by Universe] as buf #1b5e20
+[shared_ptr<Fixture>] as fixptr
+[Parameter (bytes* -> buffer)] as param #0d47a1
+[Stored / Pools] as stored
+[Group -> FixtureGroup] as group #0d47a1
+[ProgrammerLayer] as prog #0d47a1
+
+engine --> patch : owns
+engine --> stored : owns
+engine --> prog : owns
+patch --> uni : owns by value
+uni --> buf : owns
+uni --> fixptr : owns
+patch --> fixptr : shares
+fixptr --> param
+param ..> buf : non-owning ptr
+stored --> group
+group ..> fixptr : shares
+prog ..> fixptr : shares in selection
+
+legend right
+  |= color |= meaning |
+  |<#1b5e20> green | owns heap |
+  |<#0d47a1> blue  | non-owning reference / share |
+  Fixtures own no bytes; Parameter/ColorCell
+  hold raw pointers into the Universe buffer.
+endlegend
+@enduml

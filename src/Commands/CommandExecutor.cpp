@@ -1,6 +1,9 @@
 #include "LightEngine/Commands/CommandExecutor.h"
 
+#include "Utils/Colors/Colors.h"
+
 #include <algorithm>
+#include <cstdint>
 
 namespace LightEngine::Commands
 {
@@ -23,19 +26,6 @@ void CommandExecutor::run(Macros::Program &program)
 {
     for (auto &cmd : program)
         cmd->accept(*this);
-}
-
-CommandExecutor::PresetKind CommandExecutor::presetKind(long long bank)
-{
-    switch (bank)
-    {
-    case 1:
-        return PresetKind::Dimmer;
-    case 2:
-        return PresetKind::Color;
-    default:
-        return PresetKind::Unknown;
-    }
 }
 
 std::vector<uint16_t> CommandExecutor::expand(Macros::Selector &sel) const
@@ -77,27 +67,32 @@ CommandExecutor::resolveSelection(Macros::SelectCmd &c) const
 
 void CommandExecutor::applyAt(const Macros::AtValue &at)
 {
-    if (!at.isPreset)
+    if (at.kind == "level")
     {
         // 'at' levels are 0..100; the programmer takes 0..1.
         m_engine.programmer().setIntensity(
             static_cast<float>(at.level / 100.0));
         return;
     }
+    if (at.kind == "color")
+    {
+        // 'at color r,g,b' is a full RGB value: hue/sat AND brightness (the
+        // value channel), so it lights up on its own without a prior 'at <n>'.
+        const Utils::Colors::HSV hsv = Utils::Colors::rgbToHsv(
+            Utils::Colors::RGB(static_cast<uint8_t>(at.r),
+                               static_cast<uint8_t>(at.g),
+                               static_cast<uint8_t>(at.b)));
+        m_engine.programmer().setColor(hsv);
+        return;
+    }
+    // kind == "preset"
     auto *p = dynamic_cast<Macros::Preset *>(at.preset.get());
     if (!p)
         return;
-    switch (presetKind(p->bank))
-    {
-    case PresetKind::Color:
+    if (p->kind == "color")
         m_engine.recallColorPreset(static_cast<uint32_t>(p->number));
-        break;
-    case PresetKind::Dimmer:
+    else
         m_engine.recallDimmerPreset(static_cast<uint32_t>(p->number));
-        break;
-    case PresetKind::Unknown:
-        break;
-    }
 }
 
 // ---- CommandVisitor ---------------------------------------------------------
@@ -116,17 +111,10 @@ void CommandExecutor::visit(Macros::StoreCmd &c)
     }
     else if (auto *p = dynamic_cast<Macros::Preset *>(c.target.get()))
     {
-        switch (presetKind(p->bank))
-        {
-        case PresetKind::Color:
+        if (p->kind == "color")
             m_engine.storeColorPreset(static_cast<uint32_t>(p->number));
-            break;
-        case PresetKind::Dimmer:
+        else
             m_engine.storeDimmerPreset(static_cast<uint32_t>(p->number));
-            break;
-        case PresetKind::Unknown:
-            break;
-        }
     }
 }
 
@@ -138,19 +126,12 @@ void CommandExecutor::visit(Macros::DeleteCmd &c)
     }
     else if (auto *p = dynamic_cast<Macros::Preset *>(c.target.get()))
     {
-        switch (presetKind(p->bank))
-        {
-        case PresetKind::Color:
+        if (p->kind == "color")
             m_engine.stored().colorPresets().remove(
                 static_cast<uint32_t>(p->number));
-            break;
-        case PresetKind::Dimmer:
+        else
             m_engine.stored().dimmerPresets().remove(
                 static_cast<uint32_t>(p->number));
-            break;
-        case PresetKind::Unknown:
-            break;
-        }
     }
 }
 

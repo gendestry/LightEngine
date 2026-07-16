@@ -47,8 +47,14 @@ target_include_directories(LightEngine
 # --------------------------------------------------
 # Example / demo app (was the old executable)
 # --------------------------------------------------
+# Absolute path to the grammar/token data, baked into the example binaries so
+# they run from any working directory (not just the repo root).
+set(LE_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/LightEngine/Commands/data")
+
 add_executable(LightEngine_demo examples/demo/main.cpp)
 target_link_libraries(LightEngine_demo PRIVATE LightEngine::LightEngine)
+target_compile_definitions(LightEngine_demo PRIVATE LE_DATA_DIR="${LE_DATA_DIR}")
 
 add_executable(LightEngine_commands examples/commands/main.cpp)
 target_link_libraries(LightEngine_commands PRIVATE LightEngine::LightEngine)
+target_compile_definitions(LightEngine_commands PRIVATE LE_DATA_DIR="${LE_DATA_DIR}")

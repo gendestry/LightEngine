@@ -1,0 +1,23 @@
+@startuml engine-internals
+title Engine internals
+skinparam componentStyle rectangle
+
+package "Engine" {
+    [Patch\nuniverses + FID->fixture map\ndirty set] as patch
+    [TimeContext\nnow · dt · frame] as time
+    [Frame\nFID->FixtureValues\nrebuilt each tick] as frame
+    [ProgrammerLayer\npriority 1000] as prog
+    [m_layers: vector<Layer*>\ncomposed low->high] as layers
+    [Stored\nobject pools] as stored
+    [DMXOutput\nsACN senders] as output
+    [CommandParser + CommandExecutor\npImpl via unique_ptr] as parser
+}
+
+prog ..> layers : registered in
+layers --> frame : apply
+frame --> patch : Resolve
+patch --> output : buffers
+prog --> patch : resolves FIDs
+stored --> prog : recall onto
+parser --> patch : drives facade
+@enduml

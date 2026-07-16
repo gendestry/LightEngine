@@ -77,20 +77,29 @@ std::vector<Macros::Item> AstBuilder::buildItems(const Node &selection)
     return items;
 }
 
-// at : AT (NUM | presetsel)   kids = [AT, NUM] | [AT, presetsel]
+// at : AT (atdim | atcolor | presetsel)   kids = [AT, atdim|atcolor|presetsel]
 Macros::AtValue AstBuilder::buildAtValue(const Node &at)
 {
     Macros::AtValue v;
     const Node &x = at.kids[1];
     if (x.rule == "presetsel")
     {
-        v.isPreset = true;
+        v.kind = "preset";
         v.preset = buildPresetsel(x);
     }
-    else
+    else if (x.rule == "atcolor")
     {
-        v.isPreset = false;
-        v.level = std::stod(x.token->value);
+        // atcolor : COLOR NUM COMMA NUM COMMA NUM
+        //   kids = [COLOR, NUM, COMMA, NUM, COMMA, NUM]
+        v.kind = "color";
+        v.r = std::stoll(x.kids[1].token->value);
+        v.g = std::stoll(x.kids[3].token->value);
+        v.b = std::stoll(x.kids[5].token->value);
+    }
+    else // atdim : NUM   kids = [NUM]
+    {
+        v.kind = "level";
+        v.level = std::stod(x.kids[0].token->value);
     }
     return v;
 }
@@ -134,12 +143,12 @@ Macros::SelectorPtr AstBuilder::buildGrpsel(const Node &grpsel)
     return g;
 }
 
-// presetsel : PRESET NUM DOT NUM   kids = [PRESET, NUM, DOT, NUM]
+// presetsel : PRESET (DIMMER | COLOR) NUM   kids = [PRESET, kind, NUM]
 Macros::SelectorPtr AstBuilder::buildPresetsel(const Node &presetsel)
 {
     auto p = std::make_unique<Macros::Preset>();
-    p->bank = std::stoll(presetsel.kids[1].token->value);
-    p->number = std::stoll(presetsel.kids[3].token->value);
+    p->kind = presetsel.kids[1].token->value; // "dimmer" | "color"
+    p->number = std::stoll(presetsel.kids[2].token->value);
     return p;
 }
 

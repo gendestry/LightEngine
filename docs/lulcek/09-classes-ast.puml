@@ -1,0 +1,56 @@
+@startuml classes-ast
+title Command AST (visitor pattern, auto-generated)
+
+abstract class Command {
+    +accept(visitor) void
+}
+abstract class Selector {
+    +accept(visitor) void
+}
+class SelectCmd {
+    +vector<Item> items
+    +bool hasAt
+    +AtValue at
+}
+class StoreCmd
+class DeleteCmd
+class ClearCmd
+class AtCmd
+class Fixture_ {
+    +int64 id
+}
+class FixtureRange {
+    +int64 from
+    +int64 to
+}
+class Group_ {
+    +int64 id
+}
+class Preset_ {
+    +int64 bank
+    +int64 number
+}
+class CommandExecutor {
+    -Engine engine
+    +run(program) void
+    +visit(cmd) void
+}
+
+Command <|-- SelectCmd
+Command <|-- StoreCmd
+Command <|-- DeleteCmd
+Command <|-- ClearCmd
+Command <|-- AtCmd
+Selector <|-- Fixture_
+Selector <|-- FixtureRange
+Selector <|-- Group_
+Selector <|-- Preset_
+CommandExecutor ..|> Command : CommandVisitor
+SelectCmd o-- Selector : items
+
+note bottom
+  The Macros:: AST is generated from commands.spec
+  by gen_ast.py (header carries an
+  "AUTO-GENERATED — do not edit" banner).
+end note
+@enduml

@@ -1,0 +1,25 @@
+@startuml pools
+title Pools — the show's stored objects
+skinparam componentStyle rectangle
+left to right direction
+
+[Stored] as stored
+[Pool<Group>] as pg
+[Pool<ColorPreset>] as pc
+[Pool<DimmerPreset>] as pd
+[Pool<Sequence>  (planned)] as seq #e65100
+[Pool<Effect>  (planned)] as eff #e65100
+
+stored --> pg
+stored --> pc
+stored --> pd
+stored ..> seq
+stored ..> eff
+
+note bottom of pg
+  Each Pool<T> is a numbered slot map
+  (uint32_t -> shared_ptr<T>) with a name
+  index, nextFree() gap-finding, and
+  store/get/remove/move/rename.
+end note
+@enduml

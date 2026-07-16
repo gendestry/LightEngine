@@ -1,0 +1,25 @@
+@startuml command-pipeline
+title Command subsystem — text to actions
+skinparam componentStyle rectangle
+left to right direction
+
+[command line\n'1 thru 4 + 7 at 50'] as txt
+[Tokenizer\ntokens.txt] as tok
+[CST\nParsing::Syntax::Node] as cst
+[typed AST\nMacros::Program] as ast
+[CommandExecutor\nCommandVisitor] as exec
+[Engine facade] as eng
+
+txt --> tok
+tok --> cst
+cst --> ast : AstBuilder
+ast --> exec : accept/visit
+exec --> eng
+
+note bottom of cst
+  grammar (commands.syn) and token defs
+  (commands.txt) are external data files:
+  the console language evolves without
+  recompiling.
+end note
+@enduml

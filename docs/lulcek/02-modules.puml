@@ -1,0 +1,29 @@
+@startuml modules
+title LightEngine — Layered Modules (dependency stack)
+skinparam componentStyle rectangle
+
+component "Commands\nCommandParser · AstBuilder\nCommandExecutor · Macros AST" as CMD
+component "Engine\nEngine · Patch · DMXOutput\nLayer/ProgrammerLayer · Frame · TimeContext\nPools (Stored, Group, Preset)" as ENG
+component "DMX\nUniverse · FixtureGroup" as DMX
+component "Fixture\nFixture · Parameter · ColorCell" as FIX
+component "GDTF\nAttribute · LogicalChannel\nDMXChannel · Ranges" as GDTF
+
+component "Utils (external)\nColors (HSV/RGB) · Network (IP/SACN)\nFragmentedStorage" as UTILS #37474f
+component "NewSyntaxParser (external)\nTokenizer · Grammar · CST Node" as SYN #37474f
+
+CMD --> ENG
+CMD --> SYN
+ENG --> DMX
+ENG --> FIX
+ENG --> UTILS
+DMX --> FIX
+DMX --> UTILS
+FIX --> GDTF
+FIX --> UTILS
+
+note right of CMD
+  Strict downward dependency:
+  higher layers depend on lower,
+  never the reverse.
+end note
+@enduml

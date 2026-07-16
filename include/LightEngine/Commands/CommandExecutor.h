@@ -14,7 +14,7 @@
 //   StoreCmd   ->  storeGroup / storeColorPreset|storeDimmerPreset
 //   DeleteCmd  ->  pool.remove
 //   ClearCmd   ->  engine.clear()
-//   AtCmd      ->  set intensity, or recall a preset
+//   AtCmd      ->  set intensity/color, or recall a preset
 //
 namespace LightEngine::Commands
 {
@@ -43,18 +43,8 @@ private:
     // final ordered fid list handed to the programmer.
     std::vector<uint16_t> resolveSelection(Macros::SelectCmd &c) const;
 
-    // Apply an 'at': a bare number sets intensity (level/100), a preset ref
-    // recalls that preset onto the current selection.
+    // Apply an 'at': a bare number sets intensity (level/100), a color sets
+    // hue/sat from r,g,b, a preset ref recalls that preset onto the selection.
     void applyAt(const Macros::AtValue &at);
-
-    // Preset addressing: bank picks the pool, number is the slot.
-    //   bank 1 -> dimmer, bank 2 -> color
-    enum class PresetKind
-    {
-        Dimmer,
-        Color,
-        Unknown,
-    };
-    static PresetKind presetKind(long long bank);
 };
 } // namespace LightEngine::Commands
