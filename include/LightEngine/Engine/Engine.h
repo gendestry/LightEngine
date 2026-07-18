@@ -1,13 +1,11 @@
 #pragma once
 
 #include <cstdint>
-#include <map>
 #include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
-#include "LightEngine/DMX/FixtureGroup.h"
 #include "LightEngine/Engine/DMXOutput.h"
 #include "LightEngine/Engine/Frame.h"
 #include "LightEngine/Engine/Layer.h"
@@ -25,10 +23,10 @@ class CommandExecutor;
 } // namespace LightEngine::Commands
 
 //
-// Engine: the top-level orchestrator. Owns the Patch (universes + fixtures), the
-// programmer, the stored object pools and the output stage, exposing a small
-// facade: patch -> select -> program -> store/recall -> update. Non-tracking:
-// update() rebuilds every universe from scratch each frame.
+// Engine: the top-level orchestrator. Owns the Patch (universes + fixtures),
+// the programmer, the stored object pools and the output stage, exposing a
+// small facade: patch -> select -> program -> store/recall -> update.
+// Non-tracking: update() rebuilds every universe from scratch each frame.
 //
 namespace LightEngine::Engine
 {
@@ -55,11 +53,12 @@ public:
     Engine();
     ~Engine(); // out-of-line: m_parser/m_exec are incomplete types here
 
-    // ---- patching (template overload; name overload needs FixtureLibrary) ----
-    std::vector<uint16_t> patch(const Fixtures::Fixture &fixture,
-                                uint16_t universe, uint16_t amount,
-                                std::optional<uint32_t> start = std::nullopt,
-                                std::optional<uint16_t> startFID = std::nullopt);
+    // ---- patching (template overload; name overload needs FixtureLibrary)
+    // ----
+    std::vector<uint16_t>
+    patch(const Fixtures::Fixture &fixture, uint16_t universe, uint16_t amount,
+          std::optional<uint32_t> start = std::nullopt,
+          std::optional<uint16_t> startFID = std::nullopt);
 
     // ---- stored pools ----
     [[nodiscard]] Stored &stored() { return m_stored; }
@@ -103,8 +102,8 @@ public:
     // ---- render ----
     // Non-tracking frame: wipe every universe, then push each fixture's state
     // back into its buffer via Resolve() (color cells + generic attributes).
-    // dt is the wall-clock delta since the last frame (seconds); the caller owns
-    // the clock so the render path stays deterministic and testable.
+    // dt is the wall-clock delta since the last frame (seconds); the caller
+    // owns the clock so the render path stays deterministic and testable.
     void update(float dt = 0.f);
 
     // ---- output (sACN) ----

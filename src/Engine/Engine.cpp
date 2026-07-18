@@ -82,8 +82,8 @@ Pools::DimmerPreset &Engine::storeDimmerPreset(uint32_t num)
 {
     auto preset = std::make_shared<Pools::DimmerPreset>();
     for (const auto &[fid, v] : m_programmer.edits())
-        if (v.color)
-            preset->set(fid, v.color->v);
+        if (v.intensity)
+            preset->set(fid, *v.intensity);
     return m_stored.dimmerPresets().store(num, std::move(preset));
 }
 

@@ -69,7 +69,8 @@ public:
     }
 
     // ---- edits (scoped to the current selection) ----
-    void setColor(const Utils::Colors::HSV &hsv); // sets hue/sat/intensity
+    void setColor(const Utils::Colors::HSV &hsv); // sets hue/sat only
+    void setColor(const Utils::Colors::RGB &rgb); // converts to HSV, hue/sat
     void setHueSat(float h, float s);
     void setIntensity(float v);
     // Distribute intensity a..b across the selection in order (t = i/(n-1)).
@@ -84,7 +85,7 @@ public:
         c.h = h;
         c.s = s;
     }
-    void applyIntensity(uint16_t fid, float v) { ensureColor(fid).v = v; }
+    void applyIntensity(uint16_t fid, float v) { m_edits[fid].intensity = v; }
     [[nodiscard]] const std::map<uint16_t, FixtureValues> &edits() const
     {
         return m_edits;

@@ -14,10 +14,19 @@ Utils::Colors::HSV &ProgrammerLayer::ensureColor(uint16_t fid)
 
 void ProgrammerLayer::setColor(const Utils::Colors::HSV &hsv)
 {
+    // Color and intensity are independent: setColor touches only hue/sat and
+    // never the dimmer. If intensity is 0 the fixture stays dark regardless.
     for (const auto &f : m_selection.fixtures())
     {
-        ensureColor(f->Fid()) = hsv;
+        Utils::Colors::HSV &c = ensureColor(f->Fid());
+        c.h = hsv.h;
+        c.s = hsv.s;
     }
+}
+
+void ProgrammerLayer::setColor(const Utils::Colors::RGB &rgb)
+{
+    setColor(Utils::Colors::rgbToHsv(rgb));
 }
 
 void ProgrammerLayer::setHueSat(float h, float s)
@@ -34,7 +43,7 @@ void ProgrammerLayer::setIntensity(float v)
 {
     for (const auto &f : m_selection.fixtures())
     {
-        ensureColor(f->Fid()).v = v;
+        m_edits[f->Fid()].intensity = v;
     }
 }
 
@@ -45,7 +54,7 @@ void ProgrammerLayer::setIntensityRamp(float a, float b)
     for (std::size_t i = 0; i < n; ++i)
     {
         float t = n <= 1 ? 0.f : float(i) / float(n - 1);
-        ensureColor(fixtures[i]->Fid()).v = a + (b - a) * t;
+        m_edits[fixtures[i]->Fid()].intensity = a + (b - a) * t;
     }
 }
 

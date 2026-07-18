@@ -43,8 +43,12 @@ int main()
     prog.add(fids10);
     engine.storeGroup(1);
     engine.stored().groups().rename(1, "all");
-    prog.setIntensity(0.5f);
+    // prog.setIntensity(0.5f);
     prog.clearAll();
+
+    engine.selectGroup(1);
+    prog.setIntensity(1.f);
+    prog.setColor(Utils::Colors::RGB{0, 0, 255});
 
     // // fan hue red->blue across the selection, full intensity, then bank it
     // as

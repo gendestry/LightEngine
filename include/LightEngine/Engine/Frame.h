@@ -25,7 +25,8 @@ enum class MergePolicy
 // layer only fills what it controls, leaving the rest for lower layers.
 struct FixtureValues
 {
-    std::optional<Utils::Colors::HSV> color;   // hue/sat + intensity (V)
+    std::optional<Utils::Colors::HSV> color;   // hue/sat (V unused here)
+    std::optional<float> intensity;            // dimmer, 0..1 (separate from V)
     std::map<GDTF::Attribute, float> generic;  // pan, tilt, gobo, ...
 };
 

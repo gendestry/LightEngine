@@ -135,13 +135,18 @@ ColorCell &Fixture::Cell(std::size_t index) { return m_colorCells[index]; }
 
 void Fixture::Resolve(const Engine::FixtureValues &values)
 {
-    // color cells (HSV -> RGB + virtual dimmer). Only touched if a layer
-    // contributed a color; otherwise the cells stay at the frame's blackout.
-    if (values.color)
+    // color cells (HSV -> RGB + virtual dimmer). Hue/sat and intensity are
+    // independent contributions; touch the cells if either was set, leaving the
+    // untouched component at its default (hue/sat 0 = white, intensity 0 =
+    // dark). A cell at intensity 0 renders black no matter its colour.
+    if (values.color || values.intensity)
     {
         for (ColorCell &cell : m_colorCells)
         {
-            cell.SetColor(*values.color);
+            if (values.color)
+                cell.SetHueSat(values.color->h, values.color->s);
+            if (values.intensity)
+                cell.SetIntensity(*values.intensity);
             cell.Resolve();
         }
     }

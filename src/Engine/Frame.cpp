@@ -12,14 +12,19 @@ void Frame::contribute(uint16_t fid, const FixtureValues &in, MergePolicy policy
     {
         if (!dst.color || policy == MergePolicy::LTP)
         {
-            dst.color = in.color; // latest wins
+            dst.color = in.color; // latest wins (color is LTP)
         }
-        else // HTP: keep the brighter intensity, take incoming hue/sat with it
+    }
+
+    if (in.intensity)
+    {
+        if (!dst.intensity || policy == MergePolicy::LTP)
         {
-            if (in.color->v > dst.color->v)
-            {
-                dst.color = in.color;
-            }
+            dst.intensity = in.intensity; // latest wins
+        }
+        else // HTP: brighter wins
+        {
+            dst.intensity = std::max(*dst.intensity, *in.intensity);
         }
     }
 
