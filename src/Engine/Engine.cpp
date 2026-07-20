@@ -104,6 +104,45 @@ DMX::Universe *Engine::getUniverse(uint16_t universe)
     return m_patch.getUniverse(universe);
 }
 
+// ---- resolved DMX read-back ----
+uint16_t Engine::attributeValue(uint16_t fid, GDTF::Attribute attr,
+                                uint16_t cell)
+{
+    auto fixture = m_patch.getFixture(fid);
+    if (!fixture)
+        return 0;
+
+    const auto &byAttr = fixture->ByAttribute();
+    auto it = byAttr.find(attr);
+    if (it == byAttr.end())
+        return 0;
+
+    const DMX::Universe *uni = m_patch.getUniverse(fixture->Universe());
+    if (!uni)
+        return 0;
+
+    for (const Fixtures::Parameter *p : it->second)
+    {
+        if (p->CellIndex() != cell)
+            continue;
+
+        const auto &buf = uni->buffer();
+        const auto &ch = p->Definition()->channel;
+        uint32_t addr = fixture->start + ch.address;
+        if (ch.res == GDTF::DMXChannel::Resolution::Bit8)
+            return buf[addr];
+        return (uint16_t(buf[addr]) << 8) | buf[addr + 1]; // 16-bit, big-endian
+    }
+    return 0;
+}
+
+Utils::Colors::RGB Engine::color(uint16_t fid, uint16_t cell)
+{
+    return {static_cast<uint8_t>(attributeValue(fid, GDTF::Attribute::COLOR_R, cell)),
+            static_cast<uint8_t>(attributeValue(fid, GDTF::Attribute::COLOR_G, cell)),
+            static_cast<uint8_t>(attributeValue(fid, GDTF::Attribute::COLOR_B, cell))};
+}
+
 // ---- output ----
 void Engine::setIP(const std::string &ip)
 {

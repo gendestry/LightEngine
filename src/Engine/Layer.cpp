@@ -1,60 +1,58 @@
 #include "LightEngine/Engine/Layer.h"
 
+#include "Utils/Colors/Colors.h"
+
 namespace LightEngine::Engine
 {
-Utils::Colors::HSV &ProgrammerLayer::ensureColor(uint16_t fid)
+DMX::FixtureGroup ProgrammerLayer::singleFixture(uint16_t fid) const
 {
-    FixtureValues &v = m_edits[fid];
-    if (!v.color)
-    {
-        v.color = Utils::Colors::HSV{0.f, 0.f, 0.f};
-    }
-    return *v.color;
+    DMX::FixtureGroup g;
+    g.add(m_patch.getFixtures({fid}));
+    return g;
 }
+
+namespace
+{
+// Force value to 1 so the hue/sat survives the RGB round-trip a ColorEffect
+// does internally (a value of 0 would collapse to black and lose the hue).
+Utils::Colors::RGB hueSatToRgb(float h, float s)
+{
+    return Utils::Colors::hsvToRgb(Utils::Colors::HSV{h, s, 1.f});
+}
+} // namespace
 
 void ProgrammerLayer::setColor(const Utils::Colors::HSV &hsv)
 {
-    // Color and intensity are independent: setColor touches only hue/sat and
-    // never the dimmer. If intensity is 0 the fixture stays dark regardless.
-    for (const auto &f : m_selection.fixtures())
-    {
-        Utils::Colors::HSV &c = ensureColor(f->Fid());
-        c.h = hsv.h;
-        c.s = hsv.s;
-    }
+    // Colour and intensity are independent: a ColorEffect only writes hue/sat.
+    push(std::make_unique<Effects::ColorEffect>(m_selection,
+                                                hueSatToRgb(hsv.h, hsv.s)));
 }
 
 void ProgrammerLayer::setColor(const Utils::Colors::RGB &rgb)
 {
-    setColor(Utils::Colors::rgbToHsv(rgb));
+    push(std::make_unique<Effects::ColorEffect>(m_selection, rgb));
 }
 
 void ProgrammerLayer::setHueSat(float h, float s)
 {
-    for (const auto &f : m_selection.fixtures())
-    {
-        Utils::Colors::HSV &c = ensureColor(f->Fid());
-        c.h = h;
-        c.s = s;
-    }
+    push(std::make_unique<Effects::ColorEffect>(m_selection, hueSatToRgb(h, s)));
 }
 
 void ProgrammerLayer::setIntensity(float v)
 {
-    for (const auto &f : m_selection.fixtures())
-    {
-        m_edits[f->Fid()].intensity = v;
-    }
+    push(std::make_unique<Effects::DimmerEffect>(m_selection, v));
 }
 
 void ProgrammerLayer::setIntensityRamp(float a, float b)
 {
+    // Per-fixture levels -> one constant DimmerEffect per fixture.
     const auto &fixtures = m_selection.fixtures();
     const std::size_t n = fixtures.size();
     for (std::size_t i = 0; i < n; ++i)
     {
         float t = n <= 1 ? 0.f : float(i) / float(n - 1);
-        m_edits[fixtures[i]->Fid()].intensity = a + (b - a) * t;
+        push(std::make_unique<Effects::DimmerEffect>(
+            singleFixture(fixtures[i]->Fid()), a + (b - a) * t));
     }
 }
 
@@ -65,18 +63,44 @@ void ProgrammerLayer::fanColor(float hueA, float hueB, float sat)
     for (std::size_t i = 0; i < n; ++i)
     {
         float t = n <= 1 ? 0.f : float(i) / float(n - 1);
-        Utils::Colors::HSV &c = ensureColor(fixtures[i]->Fid());
-        c.h = hueA + (hueB - hueA) * t;
-        c.s = sat;
+        push(std::make_unique<Effects::ColorEffect>(
+            singleFixture(fixtures[i]->Fid()),
+            hueSatToRgb(hueA + (hueB - hueA) * t, sat)));
     }
 }
 
-void ProgrammerLayer::apply(Frame &frame, const TimeContext &)
+void ProgrammerLayer::applyHueSat(uint16_t fid, float h, float s)
 {
-    // Programmer edits are absolute overrides -> LTP.
-    for (const auto &[fid, values] : m_edits)
+    push(std::make_unique<Effects::ColorEffect>(singleFixture(fid),
+                                                hueSatToRgb(h, s)));
+}
+
+void ProgrammerLayer::applyIntensity(uint16_t fid, float v)
+{
+    push(std::make_unique<Effects::DimmerEffect>(singleFixture(fid), v));
+}
+
+std::map<uint16_t, FixtureValues> ProgrammerLayer::edits() const
+{
+    // Compose the stack the way a frame does; constant effects ignore time.
+    Frame frame;
+    const TimeContext t;
+    for (const auto &e : m_effects)
     {
-        frame.contribute(fid, values, MergePolicy::LTP);
+        e->apply(frame, t);
+    }
+    return frame.all();
+}
+
+void ProgrammerLayer::apply(Frame &frame, const TimeContext &time)
+{
+    // The programmer is just a layer of effects, replayed every frame -> live.
+    for (const auto &e : m_effects)
+    {
+        if (e->enabled())
+        {
+            e->apply(frame, time);
+        }
     }
 }
 } // namespace LightEngine::Engine

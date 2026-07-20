@@ -1,5 +1,8 @@
+#include <atomic>
 #include <chrono>
 #include <iostream>
+#include <mutex>
+#include <string>
 #include <thread>
 
 #include "LightEngine/Commands/CommandExecutor.h"
@@ -8,6 +11,7 @@
 #include "LightEngine/Engine/Engine.h"
 #include "LightEngine/Engine/FixtureBuilder.h"
 #include "Utils/Colors/HSV.h"
+#include "Utils/Commands/Args.h"
 #include "Utils/Network/Interfaces.h"
 
 using namespace LightEngine;
@@ -44,6 +48,9 @@ int main()
     engine.storeGroup(1);
     engine.stored().groups().rename(1, "all");
     // prog.setIntensity(0.5f);
+    prog.clearAll();
+    prog.select(fids8);
+    engine.storeGroup(2);
     prog.clearAll();
 
     engine.selectGroup(1);
@@ -172,25 +179,109 @@ int main()
     engine.setIP(ip);
 
     // render one frame and show the resulting DMX for universe 8
-    engine.update();
+    // engine.update();
     if (DMX::Universe *u = engine.getUniverse(8))
         std::cout << u->dump() << "\n";
 
     std::cout << "Streaming sACN from " << ip.str()
               << " (universes 8, 9, 10) - Ctrl+C to stop\n";
 
+    // every fixture we patched, for the per-frame color print
+    std::vector<uint16_t> allFids;
+    allFids.insert(allFids.end(), fids8.begin(), fids8.end());
+    allFids.insert(allFids.end(), fids9.begin(), fids9.end());
+    allFids.insert(allFids.end(), fids10.begin(), fids10.end());
+
+    // The engine is driven from a background thread; the main thread reads
+    // commands from stdin. Both touch the engine, so guard it with a mutex.
+    std::mutex engineMutex;
+    std::atomic<bool> running{true};
+
     // continuous full-frame output, like a real sACN source (~40 Hz)
-    // using namespace std::chrono;
-    // const auto period = milliseconds(25);
-    // auto last = steady_clock::now();
-    // while (true)
-    // {
-    //     const auto now = steady_clock::now();
-    //     const float dt = duration<float>(now - last).count();
-    //     last = now;
-    //
-    //     engine.update(dt); // compose -> resolve -> send
-    //     std::this_thread::sleep_for(period);
-    // }
+    using namespace std::chrono;
+    std::thread renderThread(
+        [&]()
+        {
+            const auto period = milliseconds(25);
+            auto last = steady_clock::now();
+            while (running.load())
+            {
+                const auto now = steady_clock::now();
+                const float dt = duration<float>(now - last).count();
+                last = now;
+
+                {
+                    std::lock_guard<std::mutex> lock(engineMutex);
+                    engine.update(dt); // compose -> resolve -> send
+                }
+                std::this_thread::sleep_for(period);
+            }
+        });
+
+    // input loop: "color <r> <g> <b>" sets the group color, "print" dumps the
+    // resolved {R,G,B} of every fixture, "params" lists every fixture and its
+    // parameters, "quit"/"exit" stops.
+    std::cout << "commands: color <r> <g> <b> | print | params | quit\n";
+    std::string line;
+    while (running.load() && std::getline(std::cin, line))
+    {
+        Utils::Commands::Args args(line);
+        if (args.empty())
+            continue;
+
+        const std::string &cmd = args.command();
+        std::lock_guard<std::mutex> lock(engineMutex);
+
+        if (cmd == "quit" || cmd == "exit")
+        {
+            running.store(false);
+        }
+        else if (cmd == "color" && args.getInt(1) && args.getInt(2) &&
+                 args.getInt(3))
+        {
+            prog.setColor(
+                Utils::Colors::RGB{static_cast<uint8_t>(*args.getInt(1)),
+                                   static_cast<uint8_t>(*args.getInt(2)),
+                                   static_cast<uint8_t>(*args.getInt(3))});
+        }
+        else if (cmd == "print")
+        {
+            for (uint16_t f : allFids)
+            {
+                const auto c = engine.color(f);
+                std::cout << "fid" << f << ": {" << (int)c.r << "," << (int)c.g
+                          << "," << (int)c.b << "}\n";
+            }
+        }
+        else if (cmd == "params")
+        {
+            for (const auto &[fid, fx] : engine.patcher().fixtures())
+            {
+                std::cout << "fid" << fid << " \"" << fx->Name() << "\" u"
+                          << fx->Universe() << " @" << fx->start << " (+"
+                          << fx->size << " ch)\n";
+                for (const Fixtures::Parameter &p : fx->Parameters())
+                {
+                    const auto &ch = p.Definition()->channel;
+                    const bool bit16 =
+                        ch.res == GDTF::DMXChannel::Resolution::Bit16;
+                    std::cout << "    attr=" << (int)p.Attribute()
+                              << " cell=" << p.CellIndex()
+                              << " addr=" << (fx->start + ch.address)
+                              << (bit16 ? " (16-bit)" : " (8-bit)") << " value="
+                              << (int)engine.attributeValue(fid, p.Attribute(),
+                                                            p.CellIndex())
+                              << "\n";
+                }
+            }
+        }
+        else
+        {
+            std::cout << "unknown command: " << cmd << "\n";
+        }
+    }
+
+    running.store(false);
+    renderThread.join();
     return 0;
 }

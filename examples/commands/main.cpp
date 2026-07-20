@@ -5,6 +5,7 @@
 #include "LightEngine/Engine/Engine.h"
 #include "LightEngine/Engine/FixtureBuilder.h"
 #include "Utils/Colors/HSV.h"
+#include "Utils/Network/Interfaces.h"
 
 using namespace LightEngine;
 using Fixtures::Fixture;
@@ -21,12 +22,15 @@ using GDTF::Attribute;
 int main()
 {
     Engine::Engine engine;
+    const Utils::Network::IP ip = Utils::Network::Interfaces::primaryIP();
+    engine.setSourceName("LightEngine");
+    engine.setIP(ip);
 
     // Same rig as the demo: a 3-channel RGB fixture across three universes.
-    Fixture rgb = Engine::FixtureBuilder(
-                      "RGB", {Attribute::COLOR_R, Attribute::COLOR_G,
-                              Attribute::COLOR_B})
-                      .Get();
+    Fixture rgb =
+        Engine::FixtureBuilder(
+            "RGB", {Attribute::COLOR_R, Attribute::COLOR_G, Attribute::COLOR_B})
+            .Get();
     engine.patch(rgb, 8, 93);
     engine.patch(rgb, 9, 120);
     engine.patch(rgb, 10, 60); // fids 1..273
@@ -45,7 +49,8 @@ int main()
     const char *help =
         "LightEngine command console (fids 1..273)\n"
         "  grammar commands:\n"
-        "    <n> [thru <n>] [+/- ...]   select fixtures      e.g. 1 thru 4 + 8 - 2\n"
+        "    <n> [thru <n>] [+/- ...]   select fixtures      e.g. 1 thru 4 + 8 "
+        "- 2\n"
         "    group <n>                  select a stored group\n"
         "    at <level>                 set intensity 0..100 on the selection\n"
         "    store group <n>            bank the selection as a group\n"
@@ -107,6 +112,10 @@ int main()
             std::cout << "  parse error\n";
             continue;
         }
+        // Tick the engine so the command's edits compose -> resolve -> output
+        // immediately: the programmer is a live layer, so every command lands
+        // on the wire right away.
+        engine.update();
         std::cout << "  ok [selection=" << prog.selection().size()
                   << " edits=" << prog.edits().size() << "]\n";
     }

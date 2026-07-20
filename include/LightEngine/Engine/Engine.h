@@ -12,6 +12,7 @@
 #include "LightEngine/Engine/Patch.h"
 #include "LightEngine/Engine/Pools/Stored.h"
 #include "LightEngine/Engine/TimeContext.h"
+#include "Utils/Colors/RGB.h"
 // #include "LightEngine/Show/Sequence.h"      // TODO: playback / cues
 
 // Command subsystem is owned by Engine but kept out of this header (internal):
@@ -123,6 +124,18 @@ public:
     {
         return m_frame.get(fid);
     }
+
+    // ---- resolved DMX read-back (the values actually being sent) ----
+    // These read straight from the universe buffers, selecting channels by
+    // attribute (not raw offset) so they work for any fixture layout. Valid
+    // after update(). Return 0 / black if the fixture/attribute/cell is absent.
+    //
+    // attributeValue(): one attribute of one color cell, as its DMX code
+    // (0..255 for 8-bit, 0..65535 for 16-bit).
+    [[nodiscard]] uint16_t attributeValue(uint16_t fid, GDTF::Attribute attr,
+                                          uint16_t cell = 0);
+    // color(): the resolved {R,G,B} of one color cell.
+    [[nodiscard]] Utils::Colors::RGB color(uint16_t fid, uint16_t cell = 0);
 
     // ---- layers ----
     [[nodiscard]] ProgrammerLayer &programmer() { return m_programmer; }
