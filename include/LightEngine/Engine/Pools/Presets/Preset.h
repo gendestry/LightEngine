@@ -6,6 +6,7 @@
 #include "LightEngine/DMX/FixtureGroup.h"
 #include "LightEngine/Engine/Layer.h"
 #include "LightEngine/Engine/Pools/PoolObject.h"
+#include "LightEngine/Engine/Programmer.h"
 
 //
 // Preset: a numbered, per-fixture value snapshot. The map keys ARE the list of
@@ -52,7 +53,7 @@ public:
 
     // Apply this preset onto `selection` via the programmer. Only fixtures the
     // preset stored are touched; the rest are left as-is.
-    virtual void recall(ProgrammerLayer &prog,
+    virtual void recall(Programmer &prog,
                         const DMX::FixtureGroup &selection) const = 0;
 };
 
@@ -95,7 +96,7 @@ struct ColorPreset : Preset<HueSat>
 {
     ColorPreset() : Preset<HueSat>(PresetType::COLOR) {}
 
-    void recall(ProgrammerLayer &prog,
+    void recall(Programmer &prog,
                 const DMX::FixtureGroup &selection) const override
     {
         for (const auto &f : selection.fixtures())
@@ -111,7 +112,7 @@ struct DimmerPreset : Preset<float>
 {
     DimmerPreset() : Preset<float>(PresetType::DIMMER) {}
 
-    void recall(ProgrammerLayer &prog,
+    void recall(Programmer &prog,
                 const DMX::FixtureGroup &selection) const override
     {
         for (const auto &f : selection.fixtures())

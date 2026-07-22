@@ -8,9 +8,10 @@
 
 #include "LightEngine/Engine/DMXOutput.h"
 #include "LightEngine/Engine/Frame.h"
-#include "LightEngine/Engine/Layer.h"
+// #include "LightEngine/Engine/Layer.h"
 #include "LightEngine/Engine/Patch.h"
 #include "LightEngine/Engine/Pools/Stored.h"
+#include "LightEngine/Engine/Programmer.h"
 #include "LightEngine/Engine/TimeContext.h"
 #include "Utils/Colors/RGB.h"
 // #include "LightEngine/Show/Sequence.h"      // TODO: playback / cues
@@ -39,8 +40,8 @@ class Engine
     DMXOutput m_output;           // sACN transmit stage
     bool m_outputEnabled = false; // set once an IP is configured
 
-    Frame m_frame;                // per-frame merged values (rebuilt each tick)
-    ProgrammerLayer m_programmer; // live editing layer
+    Frame m_frame;           // per-frame merged values (rebuilt each tick)
+    Programmer m_programmer; // live editing layer
     std::vector<Layer *> m_layers = {&m_programmer}; // composed low -> high
 
     Stored m_stored; // all object pools (groups, presets, cues...) live here
@@ -138,7 +139,7 @@ public:
     [[nodiscard]] Utils::Colors::RGB color(uint16_t fid, uint16_t cell = 0);
 
     // ---- layers ----
-    [[nodiscard]] ProgrammerLayer &programmer() { return m_programmer; }
+    [[nodiscard]] Programmer &programmer() { return m_programmer; }
     void addLayer(Layer *layer) { m_layers.push_back(layer); }
 
     [[nodiscard]] const TimeContext &time() const { return m_time; }
