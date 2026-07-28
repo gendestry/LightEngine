@@ -1,6 +1,7 @@
 #include "LightEngine/Fixture/Fixture.h"
 
 #include <algorithm>
+#include <sstream>
 #include <utility>
 
 namespace LightEngine::Fixtures
@@ -30,6 +31,13 @@ bool isColorAttribute(GDTF::Attribute attr)
 } // namespace
 
 Fixture::Fixture(std::string name) : m_name(std::move(name)) {}
+
+std::string Fixture::describe() const
+{
+    std::stringstream ss;
+    ss << "FID: " << m_fid << " \"" << m_name << "\" [" << size << " bytes]";
+    return ss.str();
+}
 
 Fixture::Fixture(const Fixture &other)
     : Utils::Fragment(other), m_name(other.m_name), m_fid(other.m_fid),

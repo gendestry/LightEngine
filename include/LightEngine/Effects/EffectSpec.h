@@ -14,25 +14,41 @@
 //
 namespace LightEngine::Effects
 {
-    enum class Kind : uint8_t
-    {
-        ColorEffect,
-        DimmerEffect,
-        ColorFade,
-        DimmerChase,
-    };
+enum class Type : uint8_t
+{
+    STATIC,
+    ANIMATED
+};
+enum class Kind : uint8_t
+{
+    ColorEffect,
+    DimmerEffect,
+    ColorFade,
+    DimmerChase,
+};
 
-    struct Spec
-    {
-        Kind                  kind = Kind::DimmerChase;
-        std::vector<uint16_t> fids;                            // target fixtures
+struct Spec
+{
+    Type type = Type::STATIC;
+    Kind kind = Kind::DimmerChase;
+    std::vector<uint16_t> fids; // target fixtures
 
-        // parameters (only the ones relevant to `kind` are used)
-        Utils::Maths::Type    curve  = Utils::Maths::SINUSOID;
-        float                 bpm    = 60.0f;
-        float                 spread = 1.0f;
-        float                 level  = 1.0f;                   // DimmerEffect
-        Utils::Colors::RGB    colorA{};                        // ColorEffect / ColorFade
-        Utils::Colors::RGB    colorB{};                        // ColorFade
-    };
-}
+    // parameters (only the ones relevant to `kind` are used)
+    Utils::Maths::Type curve = Utils::Maths::SINUSOID;
+    float bpm = 60.0f;
+    float spread = 1.0f;
+    float level = 1.0f;          // DimmerEffect
+    Utils::Colors::RGB colorA{}; // ColorEffect / ColorFade
+    Utils::Colors::RGB colorB{}; // ColorFade
+
+    // virtual bool update() = 0;
+};
+
+struct StaticSpec : public Spec
+{
+    // bool update()
+    // {
+
+    // }
+};
+} // namespace LightEngine::Effects

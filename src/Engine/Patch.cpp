@@ -34,10 +34,10 @@ void Patch::registerFixture(uint16_t fid, const FixturePtr &fixture)
     m_byName[fixture->Name()].push_back(fixture);
 }
 
-std::vector<uint16_t> Patch::patch(const LightEngine::Fixtures::Fixture &fixture,
-                                   uint16_t universe, uint16_t amount,
-                                   std::optional<uint32_t> start,
-                                   std::optional<uint16_t> startFID)
+std::vector<uint16_t>
+Patch::patch(const LightEngine::Fixtures::Fixture &fixture, uint16_t universe,
+             uint16_t amount, std::optional<uint32_t> start,
+             std::optional<uint16_t> startFID)
 {
     if (amount == 0)
     {

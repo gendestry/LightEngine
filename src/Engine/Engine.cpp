@@ -1,7 +1,7 @@
 #include "LightEngine/Engine/Engine.h"
 
-#include "LightEngine/Commands/CommandExecutor.h"
-#include "LightEngine/Commands/CommandParser.h"
+// #include "LightEngine/Commands/CommandExecutor.h"
+// #include "LightEngine/Commands/CommandParser.h"
 
 #include <algorithm>
 
@@ -11,23 +11,24 @@ Engine::Engine() : m_programmer(m_patch) {} // m_patch declared first -> safe
 Engine::~Engine() = default; // here the command types are complete
 
 // ---- text commands ----
-void Engine::loadCommands(const std::string &tokensFile,
-                          const std::string &grammarFile)
-{
-    m_parser = std::make_unique<Commands::CommandParser>(tokensFile, grammarFile);
-    m_exec = std::make_unique<Commands::CommandExecutor>(*this);
-}
+// void Engine::loadCommands(const std::string &tokensFile,
+//                           const std::string &grammarFile)
+// {
+//     m_parser = std::make_unique<Commands::CommandParser>(tokensFile,
+//     grammarFile); m_exec =
+//     std::make_unique<Commands::CommandExecutor>(*this);
+// }
 
-bool Engine::command(const std::string &line)
-{
-    if (!m_parser || !m_exec)
-        return false;
-    auto program = m_parser->parse(line);
-    if (program.empty())
-        return false;
-    m_exec->run(program);
-    return true;
-}
+// bool Engine::command(const std::string &line)
+// {
+//     if (!m_parser || !m_exec)
+//         return false;
+//     auto program = m_parser->parse(line);
+//     if (program.empty())
+//         return false;
+//     m_exec->run(program);
+//     return true;
+// }
 
 // ---- patching ----
 std::vector<uint16_t> Engine::patch(const Fixtures::Fixture &fixture,
@@ -39,7 +40,7 @@ std::vector<uint16_t> Engine::patch(const Fixtures::Fixture &fixture,
 }
 
 // ---- programmer ----
-void Engine::clear() { m_programmer.clearAll(); }
+// void Engine::clear() { m_programmer.clearAll(); }
 
 void Engine::selectGroup(uint32_t num)
 {
@@ -58,108 +59,113 @@ Pools::Group &Engine::storeGroup()
     return m_stored.groups().emplace(m_programmer.selection().fixtures());
 }
 
-// ---- color presets ----
-// Captures the whole programmer, not just the current selection: every fixture
-// touched since the last clear() is banked, so a preset built across several
-// selections (group then a stray fixture) keeps them all.
-Pools::ColorPreset &Engine::storeColorPreset(uint32_t num)
-{
-    auto preset = std::make_shared<Pools::ColorPreset>();
-    for (const auto &[fid, v] : m_programmer.edits())
-        if (v.color)
-            preset->set(fid, {v.color->h, v.color->s});
-    return m_stored.colorPresets().store(num, std::move(preset));
-}
+// // ---- color presets ----
+// // Captures the whole programmer, not just the current selection: every
+// fixture
+// // touched since the last clear() is banked, so a preset built across several
+// // selections (group then a stray fixture) keeps them all.
+// Pools::ColorPreset &Engine::storeColorPreset(uint32_t num)
+// {
+//     auto preset = std::make_shared<Pools::ColorPreset>();
+//     for (const auto &[fid, v] : m_programmer.edits())
+//         if (v.color)
+//             preset->set(fid, {v.color->h, v.color->s});
+//     return m_stored.colorPresets().store(num, std::move(preset));
+// }
 
-void Engine::recallColorPreset(uint32_t num)
-{
-    if (auto preset = m_stored.colorPresets().get(num))
-        preset->recall(m_programmer, m_programmer.selection());
-}
+// void Engine::recallColorPreset(uint32_t num)
+// {
+//     if (auto preset = m_stored.colorPresets().get(num))
+//         preset->recall(m_programmer, m_programmer.selection());
+// }
 
-// ---- dimmer presets ----
-Pools::DimmerPreset &Engine::storeDimmerPreset(uint32_t num)
-{
-    auto preset = std::make_shared<Pools::DimmerPreset>();
-    for (const auto &[fid, v] : m_programmer.edits())
-        if (v.intensity)
-            preset->set(fid, *v.intensity);
-    return m_stored.dimmerPresets().store(num, std::move(preset));
-}
+// // ---- dimmer presets ----
+// Pools::DimmerPreset &Engine::storeDimmerPreset(uint32_t num)
+// {
+//     auto preset = std::make_shared<Pools::DimmerPreset>();
+//     for (const auto &[fid, v] : m_programmer.edits())
+//         if (v.intensity)
+//             preset->set(fid, *v.intensity);
+//     return m_stored.dimmerPresets().store(num, std::move(preset));
+// }
 
-void Engine::recallDimmerPreset(uint32_t num)
-{
-    if (auto preset = m_stored.dimmerPresets().get(num))
-        preset->recall(m_programmer, m_programmer.selection());
-}
+// void Engine::recallDimmerPreset(uint32_t num)
+// {
+//     if (auto preset = m_stored.dimmerPresets().get(num))
+//         preset->recall(m_programmer, m_programmer.selection());
+// }
 
-// ---- lookup ----
-std::shared_ptr<Fixtures::Fixture> Engine::getFixture(uint16_t fid)
-{
-    return m_patch.getFixture(fid);
-}
+// // ---- lookup ----
+// std::shared_ptr<Fixtures::Fixture> Engine::getFixture(uint16_t fid)
+// {
+//     return m_patch.getFixture(fid);
+// }
 
-DMX::Universe *Engine::getUniverse(uint16_t universe)
-{
-    return m_patch.getUniverse(universe);
-}
+// DMX::Universe *Engine::getUniverse(uint16_t universe)
+// {
+//     return m_patch.getUniverse(universe);
+// }
 
-// ---- resolved DMX read-back ----
-uint16_t Engine::attributeValue(uint16_t fid, GDTF::Attribute attr,
-                                uint16_t cell)
-{
-    auto fixture = m_patch.getFixture(fid);
-    if (!fixture)
-        return 0;
+// // ---- resolved DMX read-back ----
+// uint16_t Engine::attributeValue(uint16_t fid, GDTF::Attribute attr,
+//                                 uint16_t cell)
+// {
+//     auto fixture = m_patch.getFixture(fid);
+//     if (!fixture)
+//         return 0;
 
-    const auto &byAttr = fixture->ByAttribute();
-    auto it = byAttr.find(attr);
-    if (it == byAttr.end())
-        return 0;
+//     const auto &byAttr = fixture->ByAttribute();
+//     auto it = byAttr.find(attr);
+//     if (it == byAttr.end())
+//         return 0;
 
-    const DMX::Universe *uni = m_patch.getUniverse(fixture->Universe());
-    if (!uni)
-        return 0;
+//     const DMX::Universe *uni = m_patch.getUniverse(fixture->Universe());
+//     if (!uni)
+//         return 0;
 
-    for (const Fixtures::Parameter *p : it->second)
-    {
-        if (p->CellIndex() != cell)
-            continue;
+//     for (const Fixtures::Parameter *p : it->second)
+//     {
+//         if (p->CellIndex() != cell)
+//             continue;
 
-        const auto &buf = uni->buffer();
-        const auto &ch = p->Definition()->channel;
-        uint32_t addr = fixture->start + ch.address;
-        if (ch.res == GDTF::DMXChannel::Resolution::Bit8)
-            return buf[addr];
-        return (uint16_t(buf[addr]) << 8) | buf[addr + 1]; // 16-bit, big-endian
-    }
-    return 0;
-}
+//         const auto &buf = uni->buffer();
+//         const auto &ch = p->Definition()->channel;
+//         uint32_t addr = fixture->start + ch.address;
+//         if (ch.res == GDTF::DMXChannel::Resolution::Bit8)
+//             return buf[addr];
+//         return (uint16_t(buf[addr]) << 8) | buf[addr + 1]; // 16-bit,
+//         big-endian
+//     }
+//     return 0;
+// }
 
-Utils::Colors::RGB Engine::color(uint16_t fid, uint16_t cell)
-{
-    return {static_cast<uint8_t>(attributeValue(fid, GDTF::Attribute::COLOR_R, cell)),
-            static_cast<uint8_t>(attributeValue(fid, GDTF::Attribute::COLOR_G, cell)),
-            static_cast<uint8_t>(attributeValue(fid, GDTF::Attribute::COLOR_B, cell))};
-}
+// Utils::Colors::RGB Engine::color(uint16_t fid, uint16_t cell)
+// {
+//     return {static_cast<uint8_t>(attributeValue(fid,
+//     GDTF::Attribute::COLOR_R, cell)),
+//             static_cast<uint8_t>(attributeValue(fid,
+//             GDTF::Attribute::COLOR_G, cell)),
+//             static_cast<uint8_t>(attributeValue(fid,
+//             GDTF::Attribute::COLOR_B, cell))};
+// }
 
-// ---- output ----
-void Engine::setIP(const std::string &ip)
-{
-    m_output.setIP(ip);
-    m_outputEnabled = true;
-}
+// // ---- output ----
+// void Engine::setIP(const std::string &ip)
+// {
+//     m_output.setIP(ip);
+//     m_outputEnabled = true;
+// }
 
-void Engine::setIP(const Utils::Network::IP &ip)
-{
-    m_output.setIP(ip);
-    m_outputEnabled = true;
-}
+// void Engine::setIP(const Utils::Network::IP &ip)
+// {
+//     m_output.setIP(ip);
+//     m_outputEnabled = true;
+// }
 
-void Engine::setSourceName(const std::string &name)
-{
-    m_output.setSourceName(name);
-}
+// void Engine::setSourceName(const std::string &name)
+// {
+//     m_output.setSourceName(name);
+// }
 
 std::string Engine::describe() const { return m_patch.describe(); }
 
@@ -173,7 +179,8 @@ void Engine::update(float dt)
 
     m_patch.blackout();
 
-    // 1. compose: layers write their contributions into the frame, composed in
+    // 1. compose: layers write their contributions into the frame, composed
+    // in
     //    priority order (low -> high) so higher layers' LTP writes win.
     m_frame.clear();
     std::stable_sort(m_layers.begin(), m_layers.end(),
@@ -198,12 +205,13 @@ void Engine::update(float dt)
         }
     }
 
-    // 3. output: continuous full-frame send, as a real sACN source does. Only
-    //    once an IP has been configured (setIP), else this is a render-only run.
-    if (m_outputEnabled)
-    {
-        m_output.sendAll(m_patch);
-    }
+    // 3. output: continuous full-frame send, as a real sACN source does.
+    // Only
+    //    once an IP has been configured (setIP), else this is a render-only
+    //     run.if (m_outputEnabled)
+    // {
+    //     m_output.sendAll(m_patch);
+    // }
     m_patch.clearDirty();
 }
 } // namespace LightEngine::Engine

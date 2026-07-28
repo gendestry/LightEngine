@@ -20,8 +20,8 @@ namespace LightEngine::Engine
 class Stored
 {
     Pool<Pools::Group> m_groups;
-    Pool<Pools::ColorPreset> m_colorPresets;
-    Pool<Pools::DimmerPreset> m_dimmerPresets;
+    // Pool<Pools::ColorPreset> m_colorPresets;
+    // Pool<Pools::DimmerPreset> m_dimmerPresets;
     // Pool<Pools::Sequence> m_sequences;  // TODO
     // Pool<Pools::Effect>   m_effects;    // TODO
 
@@ -29,29 +29,29 @@ public:
     [[nodiscard]] Pool<Pools::Group> &groups() { return m_groups; }
     [[nodiscard]] const Pool<Pools::Group> &groups() const { return m_groups; }
 
-    [[nodiscard]] Pool<Pools::ColorPreset> &colorPresets()
-    {
-        return m_colorPresets;
-    }
-    [[nodiscard]] const Pool<Pools::ColorPreset> &colorPresets() const
-    {
-        return m_colorPresets;
-    }
+    // [[nodiscard]] Pool<Pools::ColorPreset> &colorPresets()
+    // {
+    //     return m_colorPresets;
+    // }
+    // [[nodiscard]] const Pool<Pools::ColorPreset> &colorPresets() const
+    // {
+    //     return m_colorPresets;
+    // }
 
-    [[nodiscard]] Pool<Pools::DimmerPreset> &dimmerPresets()
-    {
-        return m_dimmerPresets;
-    }
-    [[nodiscard]] const Pool<Pools::DimmerPreset> &dimmerPresets() const
-    {
-        return m_dimmerPresets;
-    }
+    // [[nodiscard]] Pool<Pools::DimmerPreset> &dimmerPresets()
+    // {
+    //     return m_dimmerPresets;
+    // }
+    // [[nodiscard]] const Pool<Pools::DimmerPreset> &dimmerPresets() const
+    // {
+    //     return m_dimmerPresets;
+    // }
 
     void clear()
     {
         m_groups.clear();
-        m_colorPresets.clear();
-        m_dimmerPresets.clear();
+        // m_colorPresets.clear();
+        // m_dimmerPresets.clear();
     }
 
     // Multi-line dump of every pool, each under a labelled header.
@@ -59,8 +59,8 @@ public:
     {
         std::string s = Utils::Font::bold + "Stored" + Utils::Font::reset;
         s += section("Groups", m_groups);
-        s += section("ColorPresets", m_colorPresets);
-        s += section("DimmerPresets", m_dimmerPresets);
+        // s += section("ColorPresets", m_colorPresets);
+        // s += section("DimmerPresets", m_dimmerPresets);
         return s;
     }
 

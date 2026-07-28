@@ -6,7 +6,7 @@
 
 #include "LightEngine/DMX/FixtureGroup.h"
 #include "LightEngine/Effects/Effects.h"
-#include "LightEngine/Engine/Frame.h"
+#include "LightEngine/Engine/Layers/Frame.h"
 #include "LightEngine/Engine/Patch.h"
 #include "LightEngine/Engine/TimeContext.h"
 

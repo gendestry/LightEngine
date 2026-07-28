@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "LightEngine/Engine/Frame.h"
+#include "LightEngine/Engine/Layers/Frame.h"
 #include "LightEngine/Fixture/ColorCell.h"
 #include "LightEngine/Fixture/Parameter.h"
 #include "LightEngine/GDTF/LogicalChannel.h"
@@ -75,6 +75,12 @@ public:
     void Resolve(const Engine::FixtureValues &values);
 
     // ---- identity ----
+    // Shadows Utils::Fragment::describe(). fragmentsToString() calls
+    // describe() on a shared_ptr<Fixture> (static type), so this resolves
+    // by name-hiding - no virtual needed. Prints the real FID, not the
+    // per-universe fragment id.
+    [[nodiscard]] std::string describe() const;
+
     const std::string &Name() const { return m_name; }
     uint16_t Fid() const { return m_fid; }
     void SetFid(uint16_t fid) { m_fid = fid; }

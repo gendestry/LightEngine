@@ -3,8 +3,8 @@
 #include <map>
 
 #include "LightEngine/DMX/FixtureGroup.h"
-#include "LightEngine/Engine/Frame.h"
-#include "LightEngine/Engine/Layer.h"
+#include "LightEngine/Engine/Layers/Frame.h"
+#include "LightEngine/Engine/Layers/Layer.h"
 #include "LightEngine/Engine/Patch.h"
 #include "LightEngine/Engine/TimeContext.h"
 
@@ -27,7 +27,7 @@ class Programmer : public Layer
     DMX::FixtureGroup m_selection;
     std::vector<std::unique_ptr<Effects::Effect>> m_effects;
 
-    std::map<uint16_t, FixtureValues> m_edits; // FID -> touched values
+    // std::map<uint16_t, FixtureValues> m_edits; // FID -> touched values
 
     Utils::Colors::HSV &ensureColor(uint16_t fid);
 
@@ -66,26 +66,30 @@ public:
     }
 
     // ---- edits (scoped to the current selection) ----
-    void setColor(const Utils::Colors::HSV &hsv); // sets hue/sat only
+    // void setColor(const Utils::Colors::HSV &hsv); // sets hue/sat only
     void setColor(const Utils::Colors::RGB &rgb); // converts to HSV, hue/sat
-    void setHueSat(float h, float s);
+    // void setHueSat(float h, float s);
     void setIntensity(float v);
 
-    void applyHueSat(uint16_t fid, float h, float s);
-    void applyIntensity(uint16_t fid, float v);
+    // void applyHueSat(uint16_t fid, float h, float s);
+    // void applyIntensity(uint16_t fid, float v);
 
-    [[nodiscard]] std::map<uint16_t, FixtureValues> edits() const;
-    // Distribute intensity a..b across the selection in order (t = i/(n-1)).
-    void setIntensityRamp(float a, float b);
-    // Fan hue hueA..hueB across the selection in order, at fixed saturation.
-    void fanColor(float hueA, float hueB, float sat = 1.f);
+    // [[nodiscard]] std::map<uint16_t, FixtureValues> edits() const;
+    // // Distribute intensity a..b across the selection in order (t = i/(n-1)).
+    void setIntensityRamp()
+    {
+        push(std::make_unique<Effects::DimmerChase>(m_selection));
+    }
+    // // Fan hue hueA..hueB across the selection in order, at fixed saturation.
+    // void fanColor(float hueA, float hueB, float sat = 1.f);
 
     // ---- clear (staged, console-style) ----
-    void clearValues() { m_edits.clear(); } // keep selection
+    // void clearValues() { m_edits.clear(); } // keep selection
     void clearAll()
     {
         m_selection.clear();
-        m_edits.clear();
+        m_effects.clear();
+        // m_edits.clear();
     } // wipe both
 
     // int priority() const override { return 1000; } // programmer wins
