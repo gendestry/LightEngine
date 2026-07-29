@@ -1,6 +1,5 @@
 #pragma once
 #include <cstdint>
-#include <map>
 
 #include "LightEngine/DMX/FixtureGroup.h"
 #include "LightEngine/Engine/Layers/Frame.h"
