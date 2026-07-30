@@ -134,6 +134,8 @@ public:
     // ---- edits (scoped to the current selection) ----
     // void setColor(const Utils::Colors::HSV &hsv); // sets hue/sat only
     void setColor(const Utils::Colors::RGB &rgb); // converts to HSV, hue/sat
+    void setColorGradient(const Utils::Colors::RGB &rgb,
+                          const Utils::Colors::RGB &rgb2);
     // void setHueSat(float h, float s);
     void setIntensity(float v);
 

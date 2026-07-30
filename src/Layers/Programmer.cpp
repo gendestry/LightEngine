@@ -33,6 +33,12 @@ void Programmer::setColor(const Utils::Colors::RGB &rgb)
     running.push<Effects::StaticColor>(rgb);
 }
 
+void Programmer::setColorGradient(const Utils::Colors::RGB &rgb,
+                                  const Utils::Colors::RGB &rgb2)
+{
+    running.push<Effects::StaticColorGrad>(rgb, rgb2);
+}
+
 // void Programmer::setHueSat(float h, float s)
 // {
 //     push(
