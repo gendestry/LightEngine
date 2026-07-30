@@ -3,6 +3,7 @@
 #include <utility>
 
 #include "Utils/Colors/RGB.h"
+// #include ""
 
 #include "LightEngine/Effects/Effect.h"
 
@@ -25,6 +26,27 @@ public:
     {
     }
     void setColor(Utils::Colors::RGB color) { m_color = color; }
+    void apply(Engine::Frame &frame, const Engine::TimeContext &t) override;
+    [[nodiscard]] Spec spec() const override;
+};
+
+class StaticColorGrad : public Effect
+{
+    Utils::Colors::RGB m_startColor;
+    Utils::Colors::RGB m_endColor;
+
+public:
+    StaticColorGrad(DMX::FixtureGroup g, const Utils::Colors::RGB &color,
+                    const Utils::Colors::RGB &color2)
+        : Effect(std::move(g)), m_startColor(color), m_endColor(color2)
+    {
+    }
+    void setGradient(const Utils::Colors::RGB &color,
+                     const Utils::Colors::RGB &color2)
+    {
+        m_startColor = color;
+        m_endColor = color2;
+    }
     void apply(Engine::Frame &frame, const Engine::TimeContext &t) override;
     [[nodiscard]] Spec spec() const override;
 };

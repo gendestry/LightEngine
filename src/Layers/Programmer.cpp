@@ -30,7 +30,7 @@ Utils::Colors::RGB hueSatToRgb(float h, float s)
 
 void Programmer::setColor(const Utils::Colors::RGB &rgb)
 {
-    push(std::make_unique<Effects::StaticColor>(m_selection, rgb));
+    running.push<Effects::StaticColor>(rgb);
 }
 
 // void Programmer::setHueSat(float h, float s)
@@ -42,7 +42,7 @@ void Programmer::setColor(const Utils::Colors::RGB &rgb)
 
 void Programmer::setIntensity(float v)
 {
-    push(std::make_unique<Effects::StaticIntensity>(m_selection, v));
+    running.push<Effects::StaticIntensity>(v);
 }
 
 // void Programmer::setIntensityRamp(float a, float b)
@@ -97,11 +97,15 @@ void Programmer::setIntensity(float v)
 void Programmer::apply(Frame &frame, const TimeContext &time)
 {
     // The programmer is just a layer of effects, replayed every frame ->
-    for (const auto &e : m_effects)
+    // walk every stack in order, then every effect within it.
+    for (const auto &stack : running.stacks)
     {
-        if (e->enabled())
+        for (const auto &e : stack.effects)
         {
-            e->apply(frame, time);
+            if (e->enabled())
+            {
+                e->apply(frame, time);
+            }
         }
     }
 }

@@ -334,13 +334,13 @@ int main()
 
     // RGB fixtures (3 channels each) across three universes.
     auto fids8 = engine.patch(rgb, 8, 5);
-    auto fids9 = engine.patch(rgb, 9, 10);
-    auto fids10 = engine.patch(rgb, 10, 11);
+    // auto fids9 = engine.patch(rgb, 9, 10);
+    // auto fids10 = engine.patch(rgb, 10, 11);
 
     auto &prog = engine.programmer();
     prog.select(fids8);
     engine.storeGroup();
-    prog.clearAll();
+    // prog.clearAll();
     // prog.select(fids9);
     // engine.storeGroup();
     // prog.clearAll();
@@ -348,38 +348,37 @@ int main()
     // engine.storeGroup();
     // prog.clearAll();
 
-    for (auto &g : engine.stored().groups())
-    {
-        for (auto &fid : g.second->fids())
-        {
-            std::cout << fid << std::endl;
-        }
+    // for (auto &g : engine.stored().groups())
+    // {
+    //     for (auto &fid : g.second->fids())
+    //     {
+    //         std::cout << fid << std::endl;
+    //     }
 
-        std::cout << "New" << std::endl;
-    }
+    //     std::cout << "New" << std::endl;
+    // }
 
     const auto period = std::chrono::milliseconds(1000);
-    engine.selectGroup(1);
-    // prog.setIntensity(1.f);
-    prog.setIntensityRamp();
+    // engine.selectGroup(1);
+    prog.setIntensity(1.f);
+    // prog.setIntensityRamp();
     prog.setColor({255, 0, 0});
+    // engine.update(0.1f); // fractional dt so phase() actually advances
+
     for (int i = 0; i < 5; i++)
     {
         engine.update(0.1f); // fractional dt so phase() actually advances
         std::this_thread::sleep_for(period);
 
-        // Compact per-frame readout: each fixture's R channel = 255 * intensity
+        // Compact per-frame readout: each fixture's R channel = 255 *
+        // intensity
         // (color is red), so this column shows the DimmerChase ramp move.
-        std::cout << "frame " << i << ":";
+        std::cout << "frame " << i << ":\n";
         for (const auto &[id, uni] : engine.patcher().universes())
         {
-            for (const auto &fx : uni.fixtures())
-            {
-                const int r = uni.buffer()[fx->start]; // R = intensity here
-                std::cout << " fid" << fx->Fid() << "=" << r;
-            }
+            std::cout << "Universe " << id << ":\n";
+            std::cout << uni.dump() << "\n";
         }
-        std::cout << "\n";
     }
 
     std::cout << engine.describe();

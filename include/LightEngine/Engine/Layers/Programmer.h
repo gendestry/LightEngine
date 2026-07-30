@@ -15,6 +15,64 @@
 namespace LightEngine::Engine
 {
 
+struct EffectStack
+{
+    DMX::FixtureGroup selection;
+    std::vector<std::unique_ptr<Effects::Effect>> effects;
+    bool dirty = false;
+};
+
+struct RunningEffects
+{
+    EffectStack *c_ptr = nullptr;
+    std::vector<EffectStack> stacks;
+
+    void createNew()
+    {
+        stacks.push_back(EffectStack());
+        c_ptr = &stacks.back();
+    }
+
+    void clearCurrent()
+    {
+        auto &v = *c_ptr;
+        v = EffectStack();
+    }
+
+    RunningEffects() { createNew(); }
+
+    void select(const DMX::FixtureGroup &g)
+    {
+        if (c_ptr->dirty)
+        {
+            createNew();
+            return;
+        }
+        c_ptr->selection.add(g);
+    }
+
+    void add(const DMX::FixtureGroup &g)
+    {
+
+        if (!c_ptr->dirty)
+        {
+            c_ptr->selection += g;
+            return;
+        }
+
+        auto groupcp = c_ptr->selection;
+        createNew();
+        c_ptr->selection += groupcp;
+        c_ptr->selection += g;
+    }
+
+    template <typename T, typename... Args> void push(Args &&...args)
+    {
+        c_ptr->effects.push_back(
+            std::make_unique<T>(c_ptr->selection, std::forward<Args>(args)...));
+    }
+};
+
 // The live editing layer - what the CommandBuilder/CLI drives. Holds the user's
 // edits per fixture; a selection scopes the bulk setters.
 class Programmer : public Layer
@@ -23,8 +81,11 @@ class Programmer : public Layer
     // is a stored object; this is "what I'm editing right now". Engine
     // snapshots it into a Pools::Group on storeGroup().
     Patch &m_patch; // resolves raw FIDs -> live fixtures for selection
-    DMX::FixtureGroup m_selection;
-    std::vector<std::unique_ptr<Effects::Effect>> m_effects;
+    RunningEffects running;
+    // EffectStack* m_current = nullptr;
+    // std::vector<EffectStack> m_stacks;
+    // DMX::FixtureGroup m_selection;
+    // std::vector<std::unique_ptr<Effects::Effect>> m_effects;
 
     // std::map<uint16_t, FixtureValues> m_edits; // FID -> touched values
 
@@ -33,7 +94,9 @@ class Programmer : public Layer
     [[nodiscard]] DMX::FixtureGroup singleFixture(uint16_t fid) const;
     void push(std::unique_ptr<Effects::Effect> e)
     {
-        m_effects.push_back(std::move(e));
+        running.c_ptr->effects.push_back(std::move(e));
+        running.c_ptr->dirty = true;
+        // m_effects.push_back(std::move(e));
     }
 
 public:
@@ -43,25 +106,29 @@ public:
     // select() replaces the current selection, add() accumulates onto it.
     // FixtureGroup overloads take an already-resolved selection; the FID
     // overloads resolve through the patch (skips unpatched FIDs).
-    void select(const DMX::FixtureGroup &g)
-    {
-        m_selection.clear();
-        m_selection.add(g);
-    }
+    void select(const DMX::FixtureGroup &g) { running.select(g); }
     void select(const std::vector<uint16_t> &fids)
     {
-        m_selection.clear();
-        m_selection.add(m_patch.getFixtures(fids));
+        DMX::FixtureGroup g;
+        g.add(m_patch.getFixtures(fids));
+        running.select(g);
     }
-    void add(const DMX::FixtureGroup &g) { m_selection += g; }
+    void add(const DMX::FixtureGroup &g)
+    {
+
+        running.add(g);
+        // m_selection += g;
+    }
     void add(const std::vector<uint16_t> &fids)
     {
-        m_selection.add(m_patch.getFixtures(fids));
+        DMX::FixtureGroup g;
+        g.add(m_patch.getFixtures(fids));
+        add(g);
     }
-    void deselect() { m_selection.clear(); }
+    // The live selection is the current stack's selection.
     [[nodiscard]] const DMX::FixtureGroup &selection() const
     {
-        return m_selection;
+        return running.c_ptr->selection;
     }
 
     // ---- edits (scoped to the current selection) ----
@@ -73,22 +140,16 @@ public:
     // void applyHueSat(uint16_t fid, float h, float s);
     // void applyIntensity(uint16_t fid, float v);
 
-    // [[nodiscard]] std::map<uint16_t, FixtureValues> edits() const;
-    // // Distribute intensity a..b across the selection in order (t = i/(n-1)).
-    void setIntensityRamp()
-    {
-        push(std::make_unique<Effects::DimmerChase>(m_selection));
-    }
-    // // Fan hue hueA..hueB across the selection in order, at fixed saturation.
-    // void fanColor(float hueA, float hueB, float sat = 1.f);
+    // A dimmer chase across the current selection.
+    void setIntensityRamp() { running.push<Effects::DimmerChase>(); }
 
     // ---- clear (staged, console-style) ----
+    void clearCurrent() {}
     // void clearValues() { m_edits.clear(); } // keep selection
     void clearAll()
     {
-        m_selection.clear();
-        m_effects.clear();
-        // m_edits.clear();
+        running.stacks.clear();
+        running.createNew(); // keep an active stack so c_ptr stays valid
     } // wipe both
 
     // int priority() const override { return 1000; } // programmer wins
@@ -96,10 +157,10 @@ public:
 
     // A copy of the live selection - Engine wraps this into a Pools::Group on
     // store. Keeps the programmer free of any pool-object dependency.
-    [[nodiscard]] DMX::FixtureGroup selectedGroup() const
-    {
-        return m_selection;
-    }
+    // [[nodiscard]] DMX::FixtureGroup selectedGroup() const
+    // {
+    //     return m_selection;
+    // }
 };
 
 // class ProgrammerLayer : public Layer
