@@ -28,6 +28,26 @@ Utils::Colors::RGB hueSatToRgb(float h, float s)
 //                                                 hueSatToRgb(hsv.h, hsv.s)));
 // }
 
+void Programmer::select(const DMX::FixtureGroup &g) { running.select(g); }
+
+void Programmer::select(const std::vector<uint16_t> &fids)
+{
+    DMX::FixtureGroup g;
+    g.add(m_patch.getFixtures(fids));
+    running.select(g);
+}
+void Programmer::add(const DMX::FixtureGroup &g)
+{
+
+    running.add(g);
+    // m_selection += g;
+}
+void Programmer::add(const std::vector<uint16_t> &fids)
+{
+    DMX::FixtureGroup g;
+    g.add(m_patch.getFixtures(fids));
+    add(g);
+}
 void Programmer::setColor(const Utils::Colors::RGB &rgb)
 {
     running.push<Effects::StaticColor>(rgb);

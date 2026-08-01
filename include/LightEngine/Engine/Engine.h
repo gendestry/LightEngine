@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "LightEngine/Engine/DMXOutput.h"
+#include "LightEngine/Engine/FixtureLibrary.h"
 #include "LightEngine/Engine/Layers/Frame.h"
 #include "LightEngine/Engine/Layers/Layer.h"
 #include "LightEngine/Engine/Layers/Programmer.h"
@@ -35,6 +36,7 @@ class Engine
 {
     Patch m_patch;
     TimeContext m_time; // advanced each update(); threaded into layers
+    FixtureLibrary m_library;
 
     DMXOutput m_output;           // sACN transmit stage
     bool m_outputEnabled = false; // set once an IP is configured
@@ -151,6 +153,9 @@ public:
 
     // ---- patch access (universes + fixtures, read-only for UIs/dumps) ----
     [[nodiscard]] const Patch &patcher() const { return m_patch; }
+
+    [[nodiscard]] FixtureLibrary &fixtureLibrary() { return m_library; }
+    // [[nodiscard]] const Patch &patcher() const { return m_patch; }
 
     [[nodiscard]] std::string describe() const;
 };

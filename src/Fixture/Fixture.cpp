@@ -1,6 +1,7 @@
 #include "LightEngine/Fixture/Fixture.h"
 
 #include <algorithm>
+#include <print>
 #include <sstream>
 #include <utility>
 
@@ -72,6 +73,7 @@ Parameter &Fixture::Add(std::shared_ptr<const GDTF::LogicalChannel> def,
 
     Parameter &p = m_parameters.emplace_back(std::move(def));
     p.SetCellIndex(cellIndex);
+    std::println("Cell index {}", cellIndex);
     return p;
 }
 
@@ -106,7 +108,8 @@ void Fixture::Build()
     // drop cells with no color components (e.g. a lone dimmer on a non-color
     // fixture shouldn't masquerade as a color emitter).
     m_colorCells.erase(std::remove_if(m_colorCells.begin(), m_colorCells.end(),
-                                      [](const ColorCell &c) { return c.IsEmpty(); }),
+                                      [](const ColorCell &c)
+                                      { return c.IsEmpty(); }),
                        m_colorCells.end());
 }
 

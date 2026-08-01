@@ -326,11 +326,8 @@ int main()
 {
     Engine::Engine engine;
 
-    // a simple 3-channel RGB fixture, built with the 8-bit FixtureBuilder
-    Fixture rgb =
-        Engine::FixtureBuilder(
-            "RGB", {Attribute::COLOR_R, Attribute::COLOR_G, Attribute::COLOR_B})
-            .Get();
+    auto &lib = engine.fixtureLibrary();
+    auto rgb = lib.find("RGB").value();
 
     // RGB fixtures (3 channels each) across three universes.
     auto fids8 = engine.patch(rgb, 8, 5);

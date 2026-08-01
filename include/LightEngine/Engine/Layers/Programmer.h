@@ -2,6 +2,7 @@
 #include <cstdint>
 
 #include "LightEngine/DMX/FixtureGroup.h"
+#include "LightEngine/Effects/EffectFactory.h"
 #include "LightEngine/Engine/Layers/Frame.h"
 #include "LightEngine/Engine/Layers/Layer.h"
 #include "LightEngine/Engine/Patch.h"
@@ -15,64 +16,6 @@
 namespace LightEngine::Engine
 {
 
-struct EffectStack
-{
-    DMX::FixtureGroup selection;
-    std::vector<std::unique_ptr<Effects::Effect>> effects;
-    bool dirty = false;
-};
-
-struct RunningEffects
-{
-    EffectStack *c_ptr = nullptr;
-    std::vector<EffectStack> stacks;
-
-    void createNew()
-    {
-        stacks.push_back(EffectStack());
-        c_ptr = &stacks.back();
-    }
-
-    void clearCurrent()
-    {
-        auto &v = *c_ptr;
-        v = EffectStack();
-    }
-
-    RunningEffects() { createNew(); }
-
-    void select(const DMX::FixtureGroup &g)
-    {
-        if (c_ptr->dirty)
-        {
-            createNew();
-            return;
-        }
-        c_ptr->selection.add(g);
-    }
-
-    void add(const DMX::FixtureGroup &g)
-    {
-
-        if (!c_ptr->dirty)
-        {
-            c_ptr->selection += g;
-            return;
-        }
-
-        auto groupcp = c_ptr->selection;
-        createNew();
-        c_ptr->selection += groupcp;
-        c_ptr->selection += g;
-    }
-
-    template <typename T, typename... Args> void push(Args &&...args)
-    {
-        c_ptr->effects.push_back(
-            std::make_unique<T>(c_ptr->selection, std::forward<Args>(args)...));
-    }
-};
-
 // The live editing layer - what the CommandBuilder/CLI drives. Holds the user's
 // edits per fixture; a selection scopes the bulk setters.
 class Programmer : public Layer
@@ -81,11 +24,7 @@ class Programmer : public Layer
     // is a stored object; this is "what I'm editing right now". Engine
     // snapshots it into a Pools::Group on storeGroup().
     Patch &m_patch; // resolves raw FIDs -> live fixtures for selection
-    RunningEffects running;
-    // EffectStack* m_current = nullptr;
-    // std::vector<EffectStack> m_stacks;
-    // DMX::FixtureGroup m_selection;
-    // std::vector<std::unique_ptr<Effects::Effect>> m_effects;
+    Effects::EffectFactory running;
 
     // std::map<uint16_t, FixtureValues> m_edits; // FID -> touched values
 
@@ -96,7 +35,6 @@ class Programmer : public Layer
     {
         running.c_ptr->effects.push_back(std::move(e));
         running.c_ptr->dirty = true;
-        // m_effects.push_back(std::move(e));
     }
 
 public:
@@ -106,25 +44,10 @@ public:
     // select() replaces the current selection, add() accumulates onto it.
     // FixtureGroup overloads take an already-resolved selection; the FID
     // overloads resolve through the patch (skips unpatched FIDs).
-    void select(const DMX::FixtureGroup &g) { running.select(g); }
-    void select(const std::vector<uint16_t> &fids)
-    {
-        DMX::FixtureGroup g;
-        g.add(m_patch.getFixtures(fids));
-        running.select(g);
-    }
-    void add(const DMX::FixtureGroup &g)
-    {
-
-        running.add(g);
-        // m_selection += g;
-    }
-    void add(const std::vector<uint16_t> &fids)
-    {
-        DMX::FixtureGroup g;
-        g.add(m_patch.getFixtures(fids));
-        add(g);
-    }
+    void select(const DMX::FixtureGroup &g);
+    void select(const std::vector<uint16_t> &fids);
+    void add(const DMX::FixtureGroup &g);
+    void add(const std::vector<uint16_t> &fids);
     // The live selection is the current stack's selection.
     [[nodiscard]] const DMX::FixtureGroup &selection() const
     {

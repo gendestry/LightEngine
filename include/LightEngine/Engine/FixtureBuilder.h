@@ -1,10 +1,20 @@
 #pragma once
 #include "LightEngine/Fixture/Fixture.h"
 #include "LightEngine/GDTF/LogicalChannel.h"
+#include <initializer_list>
 #include <memory>
 
 namespace LightEngine::Engine
 {
+
+// struct FixtureAssembly
+// {
+//     using Fixture = Fixtures::Fixture;
+//     using Attribute = GDTF::Attribute;
+//     Fixture fixture;
+//     uint16_t currentOffset = 0;
+
+// };
 class FixtureBuilder
 {
     using Fixture = Fixtures::Fixture;
@@ -24,8 +34,8 @@ class FixtureBuilder
 
 public:
     explicit FixtureBuilder(const std::string &name) : fixture(name) {}
-    explicit FixtureBuilder(const std::string &name,
-                            std::vector<Attribute> attributes)
+    FixtureBuilder(const std::string &name,
+                   std::initializer_list<Attribute> attributes)
         : fixture(name)
     {
         for (auto &attr : attributes)
