@@ -122,17 +122,24 @@ void Programmer::setIntensity(float v)
 
 void Programmer::apply(Frame &frame, const TimeContext &time)
 {
-    // The programmer is just a layer of effects, replayed every frame ->
-    // walk every stack in order, then every effect within it.
-    for (const auto &stack : running.stacks)
+    // The programmer is just a layer of effects, replayed every frame -> walk
+    // every stack in order, then every effect within it. An effect only
+    // recomputes when it is due (edited, its selection changed, or its own beat
+    // grid says a new step arrived); otherwise its cached output is replayed.
+    for (auto &stack : running.stacks)
     {
-        auto &group = stack.selection;
+        const auto &group = stack.selection;
         for (const auto &e : stack.effects)
         {
-            if (e->enabled())
+            if (!e->enabled())
             {
-                e->apply(frame, time, group);
+                continue;
             }
+            if (e->due(time.now, group))
+            {
+                e->evaluate(time, group);
+            }
+            e->replay(frame);
         }
     }
 }

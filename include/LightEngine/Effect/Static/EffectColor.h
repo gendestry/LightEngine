@@ -22,11 +22,24 @@ class StaticColor : public EffectStatic
 
 public:
     StaticColor(Utils::Colors::RGB color) : m_color(color) {}
-    void setColor(Utils::Colors::RGB color) { m_color = color; }
-    void apply(Engine::Frame &frame, const Engine::TimeContext &t,
-               const DMX::FixtureGroup &group) override;
+    void setColor(Utils::Colors::RGB color)
+    {
+        m_color = color;
+        markDirty();
+    }
 
+protected:
+    void recompute(const Engine::TimeContext &t,
+                   const DMX::FixtureGroup &group) override;
+
+public:
     EFFECT_CATEGORY(COLOR);
+
+    // std::string describe() const override
+    // {
+    //     auto &c = m_color;
+    //     return std::format("Set color to {} {} {}", c.r, c.g, c.b);
+    // };
     // [[nodiscard]] Spec spec() const override;
 };
 

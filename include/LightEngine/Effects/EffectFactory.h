@@ -3,6 +3,7 @@
 // #include <memory>
 
 #include "LightEngine/DMX/FixtureGroup.h"
+#include "LightEngine/Effect/Animated/EffectDimmerChase.h"
 #include "LightEngine/Effect/EffectBase.h"
 #include "LightEngine/Effect/Static/EffectColor.h"
 #include "LightEngine/Effect/Static/EffectIntensity.h"

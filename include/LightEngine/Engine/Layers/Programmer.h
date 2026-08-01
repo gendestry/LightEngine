@@ -69,8 +69,15 @@ public:
     // void applyHueSat(uint16_t fid, float h, float s);
     // void applyIntensity(uint16_t fid, float v);
 
-    // A dimmer chase across the current selection.
-    // void setIntensityRamp() { running.push<Effects::DimmerChase>(); }
+    // A dimmer chase across the current selection. `resolution` is both the
+    // curve's sample count and the effect's step grain: it recomputes that many
+    // times per beat, not once per frame.
+    void setIntensityRamp(Utils::Maths::Type curve = Utils::Maths::SINUSOID,
+                          float bpm = 60.f, float spread = 1.f,
+                          uint16_t resolution = 128)
+    {
+        running.push<Effects::DimmerChase>(curve, bpm, spread, resolution);
+    }
 
     // ---- clear (staged, console-style) ----
     void clearCurrent() {}

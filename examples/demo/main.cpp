@@ -300,6 +300,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <iomanip>
 #include <iostream>
 #include <mutex>
 #include <string>
@@ -330,7 +331,7 @@ int main()
     auto rgb = lib.find("RGB").value();
 
     // RGB fixtures (3 channels each) across three universes.
-    auto fids8 = engine.patch(rgb, 8, 5);
+    auto fids8 = engine.patch(rgb, 8, 10);
     // auto fids9 = engine.patch(rgb, 9, 10);
     // auto fids10 = engine.patch(rgb, 10, 11);
 
@@ -355,27 +356,43 @@ int main()
     //     std::cout << "New" << std::endl;
     // }
 
-    const auto period = std::chrono::milliseconds(1000);
-    // engine.selectGroup(1);
-    prog.setIntensity(1.f);
-    // prog.setIntensityRamp();
+    // Red at full, with a dimmer chase riding on top. The chase merges HTP, so
+    // it lifts levels rather than replacing them - no static intensity here, or
+    // it would mask the wave entirely.
     prog.setColor({255, 0, 0});
-    // engine.update(0.1f); // fractional dt so phase() actually advances
+    // 8 samples per cycle at 120 BPM -> the chase has new output 16 times a
+    // second. At 40 fps that is 16 recomputes instead of 40, and the frames in
+    // between replay the cache.
+    prog.setIntensityRamp(Utils::Maths::TRIANGLE, 120.f, 1.f, 8);
 
-    for (int i = 0; i < 5; i++)
+    // Render at 40 fps for two seconds, printing fixture 1's R channel (colour
+    // is red, so R == 255 * intensity) so the wave is visible as a column.
+    const float dt = 1.f / 40.f;
+    const std::size_t frames = 80;
+
+    std::cout << "frame   t      fid1..fid" << fids8.size() << " (R channel)\n";
+    for (std::size_t i = 0; i < frames; ++i)
     {
-        engine.update(0.1f); // fractional dt so phase() actually advances
-        std::this_thread::sleep_for(period);
+        engine.update(dt);
 
-        // Compact per-frame readout: each fixture's R channel = 255 *
-        // intensity
-        // (color is red), so this column shows the DimmerChase ramp move.
-        std::cout << "frame " << i << ":\n";
-        for (const auto &[id, uni] : engine.patcher().universes())
+        std::cout << std::setw(5) << i << std::setw(7) << std::fixed
+                  << std::setprecision(3) << engine.time().now << "   ";
+        for (uint16_t fid : fids8)
         {
-            std::cout << "Universe " << id << ":\n";
-            std::cout << uni.dump() << "\n";
+            // R is the fixture's first channel; read it straight out of the
+            // universe buffer, i.e. the bytes that would go on the wire.
+            const auto fx = engine.patcher().getFixture(fid);
+            const auto &buf =
+                engine.patcher().universes().at(fx->Universe()).buffer();
+            std::cout << std::setw(4) << static_cast<int>(buf[fx->start]);
         }
+        std::cout << "\n";
+    }
+
+    std::cout << "\nfinal universe state:\n";
+    for (const auto &[id, uni] : engine.patcher().universes())
+    {
+        std::cout << "Universe " << id << ":\n" << uni.dump() << "\n";
     }
 
     std::cout << engine.describe();

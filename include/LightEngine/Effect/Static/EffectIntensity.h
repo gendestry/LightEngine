@@ -17,10 +17,16 @@ class StaticIntensity : public EffectStatic
 
 public:
     StaticIntensity(float level) : m_level(level) {}
-    void setLevel(float level) { m_level = level; }
-    void apply(Engine::Frame &frame, const Engine::TimeContext &t,
-               const DMX::FixtureGroup &g) override;
+    void setLevel(float level)
+    {
+        m_level = level;
+        markDirty();
+    }
     EFFECT_CATEGORY(DIMMER);
+
+protected:
+    void recompute(const Engine::TimeContext &t,
+                   const DMX::FixtureGroup &g) override;
     // [[nodiscard]] Spec spec() const override;
 };
 } // namespace LightEngine::Effects
