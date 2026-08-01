@@ -9,12 +9,43 @@ namespace LightEngine::DMX
 {
 FixtureGroup::FixtureGroup(std::string name) : m_name(std::move(name)) {}
 
+FixtureGroup &FixtureGroup::operator=(const FixtureGroup &other)
+{
+    if (this != &other)
+    {
+        const uint64_t rev = m_revision;
+        m_name = other.m_name;
+        m_fixtures = other.m_fixtures;
+        m_usedUniverses = other.m_usedUniverses;
+        m_cacheDirty = true; // the cached pointers/fids describe the old members
+        m_revision = rev + 1;
+    }
+    return *this;
+}
+
+FixtureGroup &FixtureGroup::operator=(FixtureGroup &&other)
+{
+    if (this != &other)
+    {
+        const uint64_t rev = m_revision;
+        m_name = std::move(other.m_name);
+        m_fixtures = std::move(other.m_fixtures);
+        m_usedUniverses = std::move(other.m_usedUniverses);
+        m_cacheDirty = true;
+        m_revision = rev + 1;
+    }
+    return *this;
+}
+
 void FixtureGroup::rebuildCache() const
 {
     m_byAttribute.clear();
     m_colorCells.clear();
+    m_fids.clear();
+    m_fids.reserve(m_fixtures.size());
     for (const auto &f : m_fixtures)
     {
+        m_fids.push_back(f->Fid());
         for (const auto &[attr, params] : f->ByAttribute())
         {
             auto &bucket = m_byAttribute[attr];
@@ -43,6 +74,7 @@ void FixtureGroup::add(const FixturePtr &fixture)
     m_fixtures.push_back(fixture);
     m_usedUniverses.insert(fixture->Universe());
     m_cacheDirty = true;
+    ++m_revision;
 }
 
 void FixtureGroup::add(const std::vector<FixturePtr> &fixtures)
@@ -61,7 +93,35 @@ void FixtureGroup::clear()
     m_usedUniverses.clear();
     m_byAttribute.clear();
     m_colorCells.clear();
+    m_fids.clear();
     m_cacheDirty = true;
+    ++m_revision;
+}
+
+const std::vector<uint16_t> &FixtureGroup::fids() const
+{
+    if (m_cacheDirty)
+    {
+        rebuildCache();
+    }
+    return m_fids;
+}
+
+std::size_t FixtureGroup::fidsHash() const
+{
+    std::vector<uint16_t> ids = fids(); // a copy: fids() is the live cache
+    std::sort(ids.begin(), ids.end());
+
+    // FNV-1a over the sorted fid bytes.
+    std::size_t h = 1469598103934665603ULL;
+    for (const uint16_t fid : ids)
+    {
+        h ^= static_cast<std::size_t>(fid & 0xFF);
+        h *= 1099511628211ULL;
+        h ^= static_cast<std::size_t>((fid >> 8) & 0xFF);
+        h *= 1099511628211ULL;
+    }
+    return h;
 }
 
 const std::vector<Fixtures::Parameter *> &

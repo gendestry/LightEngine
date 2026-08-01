@@ -16,6 +16,10 @@
 namespace LightEngine::Engine
 {
 
+// struct StaticEffectPool
+// {
+// };
+//
 // The live editing layer - what the CommandBuilder/CLI drives. Holds the user's
 // edits per fixture; a selection scopes the bulk setters.
 class Programmer : public Layer
@@ -24,18 +28,18 @@ class Programmer : public Layer
     // is a stored object; this is "what I'm editing right now". Engine
     // snapshots it into a Pools::Group on storeGroup().
     Patch &m_patch; // resolves raw FIDs -> live fixtures for selection
-    Effects::EffectFactory running;
+    Effects::EffectHolder running;
 
     // std::map<uint16_t, FixtureValues> m_edits; // FID -> touched values
 
     Utils::Colors::HSV &ensureColor(uint16_t fid);
 
     [[nodiscard]] DMX::FixtureGroup singleFixture(uint16_t fid) const;
-    void push(std::unique_ptr<Effects::Effect> e)
-    {
-        running.c_ptr->effects.push_back(std::move(e));
-        running.c_ptr->dirty = true;
-    }
+    // void push(std::unique_ptr<Effects::Effect> e)
+    // {
+    //     running.c_ptr->effects.push_back(std::move(e));
+    //     running.c_ptr->dirty = true;
+    // }
 
 public:
     explicit Programmer(Patch &patch) : Layer(Priority::PROG), m_patch(patch) {}
@@ -57,8 +61,8 @@ public:
     // ---- edits (scoped to the current selection) ----
     // void setColor(const Utils::Colors::HSV &hsv); // sets hue/sat only
     void setColor(const Utils::Colors::RGB &rgb); // converts to HSV, hue/sat
-    void setColorGradient(const Utils::Colors::RGB &rgb,
-                          const Utils::Colors::RGB &rgb2);
+    // void setColorGradient(const Utils::Colors::RGB &rgb,
+    //                       const Utils::Colors::RGB &rgb2);
     // void setHueSat(float h, float s);
     void setIntensity(float v);
 
@@ -66,7 +70,7 @@ public:
     // void applyIntensity(uint16_t fid, float v);
 
     // A dimmer chase across the current selection.
-    void setIntensityRamp() { running.push<Effects::DimmerChase>(); }
+    // void setIntensityRamp() { running.push<Effects::DimmerChase>(); }
 
     // ---- clear (staged, console-style) ----
     void clearCurrent() {}

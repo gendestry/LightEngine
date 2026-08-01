@@ -35,13 +35,28 @@ class FixtureGroup
     mutable std::map<GDTF::Attribute, std::vector<Fixtures::Parameter *>>
         m_byAttribute;
     mutable std::vector<Fixtures::ColorCell *> m_colorCells;
+    mutable std::vector<uint16_t> m_fids;
     mutable bool m_cacheDirty = true;
+
+    // Bumped on every membership change, so a consumer that caches something
+    // derived from this selection can detect staleness in O(1) - no re-hashing
+    // and no comparing fid lists.
+    uint64_t m_revision = 0;
 
     void rebuildCache() const;
 
 public:
     FixtureGroup() = default;
     explicit FixtureGroup(std::string name);
+
+    // Copying is fine, but being assigned over is a membership change like any
+    // other: the revision must move forward, never be overwritten by the
+    // source's, or a consumer's cached revision could match by coincidence.
+    FixtureGroup(const FixtureGroup &) = default;
+    FixtureGroup(FixtureGroup &&) = default;
+    FixtureGroup &operator=(const FixtureGroup &other);
+    FixtureGroup &operator=(FixtureGroup &&other);
+    ~FixtureGroup() = default;
 
     // Membership (ignores nulls and duplicates).
     void add(const FixturePtr &fixture);
@@ -57,16 +72,18 @@ public:
         return m_fixtures;
     }
 
-    [[nodiscard]] std::vector<uint16_t> fids() const
-    {
-        std::vector<uint16_t> fidsarray;
-        // fidsarray.resize(m_fixtures.size());
-        for (auto &f : m_fixtures)
-        {
-            fidsarray.push_back(f->Fid());
-        }
-        return fidsarray;
-    }
+    // The member FIDs in selection order (cached - effects walk this every
+    // frame, so it must not allocate). Valid until the next membership change.
+    [[nodiscard]] const std::vector<uint16_t> &fids() const;
+
+    // Order-independent hash over the member fids: two groups holding the
+    // same fixtures hash the same regardless of insertion order. For identity
+    // (dedup, keying), not for per-frame staleness checks - use revision().
+    [[nodiscard]] std::size_t fidsHash() const;
+
+    // Monotonic counter of membership changes. Never reused within a group's
+    // lifetime, so `cached == revision()` is a sound cache-validity test.
+    [[nodiscard]] uint64_t revision() const { return m_revision; }
 
     [[nodiscard]] std::size_t size() const { return m_fixtures.size(); }
     [[nodiscard]] bool empty() const { return m_fixtures.empty(); }

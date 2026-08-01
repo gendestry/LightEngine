@@ -53,11 +53,11 @@ void Programmer::setColor(const Utils::Colors::RGB &rgb)
     running.push<Effects::StaticColor>(rgb);
 }
 
-void Programmer::setColorGradient(const Utils::Colors::RGB &rgb,
-                                  const Utils::Colors::RGB &rgb2)
-{
-    running.push<Effects::StaticColorGrad>(rgb, rgb2);
-}
+// void Programmer::setColorGradient(const Utils::Colors::RGB &rgb,
+//                                   const Utils::Colors::RGB &rgb2)
+// {
+//     running.push<Effects::StaticColorGrad>(rgb, rgb2);
+// }
 
 // void Programmer::setHueSat(float h, float s)
 // {
@@ -126,11 +126,12 @@ void Programmer::apply(Frame &frame, const TimeContext &time)
     // walk every stack in order, then every effect within it.
     for (const auto &stack : running.stacks)
     {
+        auto &group = stack.selection;
         for (const auto &e : stack.effects)
         {
             if (e->enabled())
             {
-                e->apply(frame, time);
+                e->apply(frame, time, group);
             }
         }
     }

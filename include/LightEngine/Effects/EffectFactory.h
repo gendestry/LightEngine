@@ -3,11 +3,13 @@
 // #include <memory>
 
 #include "LightEngine/DMX/FixtureGroup.h"
-#include "LightEngine/Effects/Effect.h"
+#include "LightEngine/Effect/EffectBase.h"
+#include "LightEngine/Effect/Static/EffectColor.h"
+#include "LightEngine/Effect/Static/EffectIntensity.h"
 // #include "LightEngine/Effects/EffectSpec.h"
 
 // //
-// // EffectFactory: builds a running Effect from a Spec, bound to the given
+// // EffectHolder: builds a running Effect from a Spec, bound to the given
 // group.
 // // This is the single construction path - used both when adding an effect
 // live
@@ -22,17 +24,28 @@ namespace LightEngine::Effects
 {
 
 // Effects on the same selection
-struct EffectStack
-{
-    DMX::FixtureGroup selection;
-    std::vector<std::unique_ptr<Effects::Effect>> effects;
-    bool dirty = false;
-};
 
-struct EffectFactory
+// struct StaticEffectStack
+// {
+//     DMX::FixtureGroup selection;
+//     // DMX::FixtureGroup selection;
+//     std::vector<std::unique_ptr<Effects::Effect>> effects;
+
+//     bool dirty = false;
+// };
+
+struct EffectHolder
 {
+    struct EffectStack
+    {
+        DMX::FixtureGroup selection;
+        std::vector<std::unique_ptr<Effects::EffectBase>> effects;
+        bool dirty = false;
+    };
+
     EffectStack *c_ptr = nullptr;
     std::vector<EffectStack> stacks;
+    // std::vector<EffectStack> stacks;
 
     void createNew()
     {
@@ -46,7 +59,7 @@ struct EffectFactory
         v = EffectStack();
     }
 
-    EffectFactory() { createNew(); }
+    EffectHolder() { createNew(); }
 
     void select(const DMX::FixtureGroup &g)
     {
@@ -76,7 +89,7 @@ struct EffectFactory
     template <typename T, typename... Args> void push(Args &&...args)
     {
         c_ptr->effects.push_back(
-            std::make_unique<T>(c_ptr->selection, std::forward<Args>(args)...));
+            std::make_unique<T>(std::forward<Args>(args)...));
     }
 };
 } // namespace LightEngine::Effects
