@@ -58,6 +58,8 @@ public:
     FixtureGroup &operator=(FixtureGroup &&other);
     ~FixtureGroup() = default;
 
+    FixtureGroup operator&(const FixtureGroup &other) {}
+
     // Membership (ignores nulls and duplicates).
     void add(const FixturePtr &fixture);
     void add(const std::vector<FixturePtr> &fixtures);
@@ -106,6 +108,40 @@ public:
 
     FixtureGroup &operator+=(const FixturePtr &fixture);
     FixtureGroup &operator+=(const FixtureGroup &other);
+
+    FixtureGroup FixtureGroup::operator&(const FixtureGroup &other) const
+    {
+        FixtureGroup result;
+
+        std::set<uint16_t> otherFids;
+        for (const auto &fixture : other.m_fixtures)
+        {
+            if (fixture)
+                otherFids.insert(fixture->Fid());
+        }
+
+        for (const auto &fixture : m_fixtures)
+        {
+            if (fixture && otherFids.contains(fixture->Fid()))
+                result.add(fixture);
+        }
+
+        return result;
+    }
+
+    FixtureGroup FixtureGroup::operator|(const FixtureGroup &other) const
+    {
+        FixtureGroup result;
+
+        // Left side first, preserving its order.
+        result.add(m_fixtures);
+
+        // add() already ignores duplicates, so this appends only fixtures
+        // that aren't already present.
+        result.add(other.m_fixtures);
+
+        return result;
+    }
 
     [[nodiscard]] std::string describe() const;
 };
