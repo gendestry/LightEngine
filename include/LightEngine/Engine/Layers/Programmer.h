@@ -2,7 +2,7 @@
 #include <cstdint>
 
 #include "LightEngine/DMX/FixtureGroup.h"
-#include "LightEngine/Effects/EffectFactory.h"
+// #include "LightEngine/Effects/EffectFactory.h"
 #include "LightEngine/Engine/Layers/Frame.h"
 #include "LightEngine/Engine/Layers/Layer.h"
 #include "LightEngine/Engine/Patch.h"
@@ -28,7 +28,7 @@ class Programmer : public Layer
     // is a stored object; this is "what I'm editing right now". Engine
     // snapshots it into a Pools::Group on storeGroup().
     Patch &m_patch; // resolves raw FIDs -> live fixtures for selection
-    Effects::EffectHolder running;
+    // Effects::EffectHolder running;
 
     // std::map<uint16_t, FixtureValues> m_edits; // FID -> touched values
 
@@ -53,10 +53,10 @@ public:
     void add(const DMX::FixtureGroup &g);
     void add(const std::vector<uint16_t> &fids);
     // The live selection is the current stack's selection.
-    [[nodiscard]] const DMX::FixtureGroup &selection() const
-    {
-        return running.c_ptr->selection;
-    }
+    // [[nodiscard]] const DMX::FixtureGroup &selection() const
+    // {
+    // return running.c_ptr->selection;
+    // }
 
     // ---- edits (scoped to the current selection) ----
     // void setColor(const Utils::Colors::HSV &hsv); // sets hue/sat only
@@ -72,20 +72,20 @@ public:
     // A dimmer chase across the current selection. `resolution` is both the
     // curve's sample count and the effect's step grain: it recomputes that many
     // times per beat, not once per frame.
-    void setIntensityRamp(Utils::Maths::Type curve = Utils::Maths::SINUSOID,
-                          float bpm = 60.f, float spread = 1.f,
-                          uint16_t resolution = 128)
-    {
-        running.push<Effects::DimmerChase>(curve, bpm, spread, resolution);
-    }
+    // void setIntensityRamp(Utils::Maths::Type curve = Utils::Maths::SINUSOID,
+    //                       float bpm = 60.f, float spread = 1.f,
+    //                       uint16_t resolution = 128)
+    // {
+    //     running.push<Effects::DimmerChase>(curve, bpm, spread, resolution);
+    // }
 
     // ---- clear (staged, console-style) ----
     void clearCurrent() {}
     // void clearValues() { m_edits.clear(); } // keep selection
     void clearAll()
     {
-        running.stacks.clear();
-        running.createNew(); // keep an active stack so c_ptr stays valid
+        // running.stacks.clear();
+        // running.createNew(); // keep an active stack so c_ptr stays valid
     } // wipe both
 
     // int priority() const override { return 1000; } // programmer wins

@@ -44,20 +44,20 @@ std::vector<uint16_t> Engine::patch(const Fixtures::Fixture &fixture,
 
 void Engine::selectGroup(uint32_t num)
 {
-    if (auto grp = m_stored.groups().get(num))
-        m_programmer.select(grp->fixtureGroup());
+    // if (auto grp = m_stored.groups().get(num))
+    //     m_programmer.select(grp->fixtureGroup());
 }
 
-Pools::Group &Engine::storeGroup(uint32_t num)
-{
-    return m_stored.groups().emplaceAt(num,
-                                       m_programmer.selection().fixtures());
-}
+// Pools::Group &Engine::storeGroup(uint32_t num)
+// {
+// return m_stored.groups().emplaceAt(num,
+//                                    m_programmer.selection().fixtures());
+// }
 
-Pools::Group &Engine::storeGroup()
-{
-    return m_stored.groups().emplace(m_programmer.selection().fixtures());
-}
+// Pools::Group &Engine::storeGroup()
+// {
+// return m_stored.groups().emplace(m_programmer.selection().fixtures());
+// }
 
 // // ---- color presets ----
 // // Captures the whole programmer, not just the current selection: every

@@ -28,18 +28,21 @@ Utils::Colors::RGB hueSatToRgb(float h, float s)
 //                                                 hueSatToRgb(hsv.h, hsv.s)));
 // }
 
-void Programmer::select(const DMX::FixtureGroup &g) { running.select(g); }
+void Programmer::select(const DMX::FixtureGroup &g)
+{
+    // running.select(g);
+}
 
 void Programmer::select(const std::vector<uint16_t> &fids)
 {
     DMX::FixtureGroup g;
     g.add(m_patch.getFixtures(fids));
-    running.select(g);
+    // running.select(g);
 }
 void Programmer::add(const DMX::FixtureGroup &g)
 {
 
-    running.add(g);
+    // running.add(g);
     // m_selection += g;
 }
 void Programmer::add(const std::vector<uint16_t> &fids)
@@ -50,7 +53,7 @@ void Programmer::add(const std::vector<uint16_t> &fids)
 }
 void Programmer::setColor(const Utils::Colors::RGB &rgb)
 {
-    running.push<Effects::StaticColor>(rgb);
+    // running.push<Effects::StaticColor>(rgb);
 }
 
 // void Programmer::setColorGradient(const Utils::Colors::RGB &rgb,
@@ -68,7 +71,7 @@ void Programmer::setColor(const Utils::Colors::RGB &rgb)
 
 void Programmer::setIntensity(float v)
 {
-    running.push<Effects::StaticIntensity>(v);
+    // running.push<Effects::StaticIntensity>(v);
 }
 
 // void Programmer::setIntensityRamp(float a, float b)
@@ -126,21 +129,21 @@ void Programmer::apply(Frame &frame, const TimeContext &time)
     // every stack in order, then every effect within it. An effect only
     // recomputes when it is due (edited, its selection changed, or its own beat
     // grid says a new step arrived); otherwise its cached output is replayed.
-    for (auto &stack : running.stacks)
-    {
-        const auto &group = stack.selection;
-        for (const auto &e : stack.effects)
-        {
-            if (!e->enabled())
-            {
-                continue;
-            }
-            if (e->due(time.now, group))
-            {
-                e->evaluate(time, group);
-            }
-            e->replay(frame);
-        }
-    }
+    // for (auto &stack : running.stacks)
+    // {
+    //     const auto &group = stack.selection;
+    //     for (const auto &e : stack.effects)
+    //     {
+    //         if (!e->enabled())
+    //         {
+    //             continue;
+    //         }
+    //         if (e->due(time.now, group))
+    //         {
+    //             e->evaluate(time, group);
+    //         }
+    //         e->replay(frame);
+    //     }
+    // }
 }
 } // namespace LightEngine::Engine

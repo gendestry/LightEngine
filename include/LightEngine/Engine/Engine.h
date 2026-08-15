@@ -11,7 +11,7 @@
 #include "LightEngine/Engine/Layers/Layer.h"
 #include "LightEngine/Engine/Layers/Programmer.h"
 #include "LightEngine/Engine/Patch.h"
-#include "LightEngine/Engine/Pools/Stored.h"
+// #include "LightEngine/Engine/Pools/Stored.h"
 #include "LightEngine/Engine/TimeContext.h"
 // #include "Utils/Colors/RGB.h"
 // #include "LightEngine/Show/Sequence.h"      // TODO: playback / cues
@@ -45,7 +45,7 @@ class Engine
     Programmer m_programmer; // live editing layer
     std::vector<Layer *> m_layers = {&m_programmer}; // composed low -> high
 
-    Stored m_stored; // all object pools (groups, presets, cues...) live here
+    // Stored m_stored; // all object pools (groups, presets, cues...) live here
 
     // Command subsystem (text -> AST -> actions). Held by pointer so the
     // parser/executor headers stay out of the public API.
@@ -64,8 +64,8 @@ public:
           std::optional<uint16_t> startFID = std::nullopt);
 
     // // ---- stored pools ----
-    [[nodiscard]] Stored &stored() { return m_stored; }
-    [[nodiscard]] const Stored &stored() const { return m_stored; }
+    // [[nodiscard]] Stored &stored() { return m_stored; }
+    // [[nodiscard]] const Stored &stored() const { return m_stored; }
 
     // // ---- text commands ----
     // // Load the grammar + token definitions (enables command()).
@@ -83,8 +83,8 @@ public:
     // // Select a stored group into the programmer (replace).
     void selectGroup(uint32_t num);
     // // Snapshot the current selection into the group pool at `num` / next
-    Pools::Group &storeGroup(uint32_t num);
-    Pools::Group &storeGroup();
+    // Pools::Group &storeGroup(uint32_t num);
+    // Pools::Group &storeGroup();
 
     // // ---- color presets ----
     // // Capture the current programmer color (h,s) per selected fixture;

@@ -337,7 +337,7 @@ int main()
 
     auto &prog = engine.programmer();
     prog.select(fids8);
-    engine.storeGroup();
+    // engine.storeGroup();
     // prog.clearAll();
     // prog.select(fids9);
     // engine.storeGroup();
@@ -359,11 +359,11 @@ int main()
     // Red at full, with a dimmer chase riding on top. The chase merges HTP, so
     // it lifts levels rather than replacing them - no static intensity here, or
     // it would mask the wave entirely.
-    prog.setColor({255, 0, 0});
+    // prog.setColor({255, 0, 0});
     // 8 samples per cycle at 120 BPM -> the chase has new output 16 times a
     // second. At 40 fps that is 16 recomputes instead of 40, and the frames in
     // between replay the cache.
-    prog.setIntensityRamp(Utils::Maths::TRIANGLE, 120.f, 1.f, 8);
+    // prog.setIntensityRamp(Utils::Maths::TRIANGLE, 120.f, 1.f, 8);
 
     // Render at 40 fps for two seconds, printing fixture 1's R channel (colour
     // is red, so R == 255 * intensity) so the wave is visible as a column.
