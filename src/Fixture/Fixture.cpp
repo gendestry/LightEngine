@@ -1,6 +1,7 @@
 #include "LightEngine/Fixture/Fixture.h"
 
 #include <algorithm>
+#include <format>
 #include <print>
 #include <sstream>
 #include <utility>
@@ -36,7 +37,11 @@ Fixture::Fixture(std::string name) : m_name(std::move(name)) {}
 std::string Fixture::describe() const
 {
     std::stringstream ss;
-    ss << "FID: " << m_fid << " \"" << m_name << "\" [" << size << " bytes]";
+    ss << std::format("'{}', ID: {}, FID: {}\n", m_name, m_uuid, m_fid);
+    ss << " - " << std::format("num par: {}", m_parameters.size());
+    ss << " - " << std::format("size: {} bytes", size);
+    // ss << " - " << std::format()
+    // ss << "FID: " << m_fid << " \"" << m_name << "\" [" << size << " bytes]";
     return ss.str();
 }
 

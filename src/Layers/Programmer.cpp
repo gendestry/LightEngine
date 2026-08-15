@@ -68,7 +68,8 @@ void Programmer::setColor(const Utils::Colors::RGB &rgb)
 
 void Programmer::setIntensity(float v)
 {
-    running.push<Effects::StaticIntensity>(v);
+    running.pushW<Effects::StaticIntensity>(v);
+    // running.push<Effects::StaticIntensity>(v);
 }
 
 // void Programmer::setIntensityRamp(float a, float b)

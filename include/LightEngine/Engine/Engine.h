@@ -67,6 +67,9 @@ public:
     [[nodiscard]] Stored &stored() { return m_stored; }
     [[nodiscard]] const Stored &stored() const { return m_stored; }
 
+    [[nodiscard]] Patch &patcher() { return m_patch; }
+    [[nodiscard]] const Patch &patcher() const { return m_patch; }
+
     // // ---- text commands ----
     // // Load the grammar + token definitions (enables command()).
     // void loadCommands(const std::string &tokensFile,
@@ -152,7 +155,7 @@ public:
     [[nodiscard]] const TimeContext &time() const { return m_time; }
 
     // ---- patch access (universes + fixtures, read-only for UIs/dumps) ----
-    [[nodiscard]] const Patch &patcher() const { return m_patch; }
+    // [[nodiscard]] const Patch &patcher() const { return m_patch; }
 
     [[nodiscard]] FixtureLibrary &fixtureLibrary() { return m_library; }
     // [[nodiscard]] const Patch &patcher() const { return m_patch; }

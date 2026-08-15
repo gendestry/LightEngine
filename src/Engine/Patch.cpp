@@ -60,6 +60,8 @@ Patch::patch(const LightEngine::Fixtures::Fixture &fixture, uint16_t universe,
         }
     }
 
+    m_allFixtures.insert(m_allFixtures.end(), placed.begin(), placed.end());
+
     std::vector<uint16_t> fids;
     fids.reserve(placed.size());
     uint16_t fid = startFID.value_or(nextFreeFid());

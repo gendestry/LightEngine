@@ -31,6 +31,7 @@ class Fixture : public Utils::Fragment
 {
     std::string m_name = "fixture";
     uint16_t m_fid = 0;
+    uint32_t m_uuid = 0;
     uint16_t m_universe = 0;
     uint8_t *m_buffer = nullptr; // -> universe buffer (non-owning)
 
@@ -39,13 +40,26 @@ class Fixture : public Utils::Fragment
     std::vector<ColorCell> m_colorCells;
 
 public:
-    Fixture() = default;
+    Fixture() {};
+    Fixture(uint32_t setid) : m_uuid(setid) {};
     explicit Fixture(std::string name);
 
     // Deep copy: parameters are copied, then the index + cells are rebuilt so
     // their pointers aim at THIS instance's parameters (not the source's).
     Fixture(const Fixture &other);
     Fixture &operator=(const Fixture &other);
+
+    static std::shared_ptr<Fixture> createPtr(const Fixture &other)
+    {
+        static uint32_t suuid = 0;
+        std::shared_ptr<Fixture> ret = std::make_shared<Fixture>(suuid++);
+        ret->m_name = other.m_name;
+        ret->m_fid = other.m_fid;
+        //   m_universe(other.m_universe), m_buffer(other.m_buffer),
+        ret->m_parameters = other.m_parameters;
+        ret->Build();
+        return ret;
+    }
 
     // ---- build ----
     // Append a parameter from a shared definition, tagged with its
@@ -83,6 +97,7 @@ public:
 
     const std::string &Name() const { return m_name; }
     uint16_t Fid() const { return m_fid; }
+    const uint32_t &UUID() const { return m_uuid; }
     void SetFid(uint16_t fid) { m_fid = fid; }
     uint16_t Universe() const { return m_universe; }
     void SetUniverse(uint16_t universe) { m_universe = universe; }
@@ -94,4 +109,5 @@ public:
         return m_byAttribute;
     }
 };
+
 } // namespace LightEngine::Fixtures

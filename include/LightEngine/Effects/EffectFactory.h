@@ -35,6 +35,13 @@ namespace LightEngine::Effects
 //     bool dirty = false;
 // };
 
+struct EffectWrapper
+{
+    DMX::FixtureGroup selection;
+    std::shared_ptr<Effects::EffectBase> effects;
+    bool dirty = false;
+};
+
 struct EffectHolder
 {
     struct EffectStack
@@ -46,7 +53,7 @@ struct EffectHolder
 
     EffectStack *c_ptr = nullptr;
     std::vector<EffectStack> stacks;
-    // std::vector<EffectStack> stacks;
+    std::vector<EffectWrapper> wrappers;
 
     void createNew()
     {
@@ -85,6 +92,14 @@ struct EffectHolder
         createNew();
         c_ptr->selection += groupcp;
         c_ptr->selection += g;
+    }
+
+    template <typename T, typename... Args> void pushW(Args &&...args)
+    {
+        EffectWrapper w;
+        w.selection = c_ptr->selection;
+        w.effects = std::make_unique<T>(std::forward<Args>(args)...);
+        wrappers.push_back(std::move(w));
     }
 
     template <typename T, typename... Args> void push(Args &&...args)
