@@ -1,5 +1,7 @@
 #include "LightEngine/Engine/Layers/Programmer.h"
 
+#include "LightEngine/Effects/Static/EffectColor.h"
+#include "LightEngine/Effects/Static/EffectIntensity.h"
 #include "Utils/Colors/Colors.h"
 
 namespace LightEngine::Engine
@@ -28,33 +30,33 @@ Utils::Colors::RGB hueSatToRgb(float h, float s)
 //                                                 hueSatToRgb(hsv.h, hsv.s)));
 // }
 
-void Programmer::select(const DMX::FixtureGroup &g)
-{
-    // running.select(g);
-}
+void Programmer::select(const DMX::FixtureGroup &g) { m_selected = g; }
 
 void Programmer::select(const std::vector<uint16_t> &fids)
 {
-    DMX::FixtureGroup g;
-    g.add(m_patch.getFixtures(fids));
-    // running.select(g);
+    DMX::FixtureGroup g(m_patch.getFixtures(fids));
+    m_selected = std::move(g);
 }
-void Programmer::add(const DMX::FixtureGroup &g)
-{
 
-    // running.add(g);
-    // m_selection += g;
-}
+void Programmer::add(const DMX::FixtureGroup &g) { m_selected += g; }
+
 void Programmer::add(const std::vector<uint16_t> &fids)
 {
-    DMX::FixtureGroup g;
-    g.add(m_patch.getFixtures(fids));
-    add(g);
+    m_selected += m_patch.getFixtures(fids);
 }
-void Programmer::setColor(const Utils::Colors::RGB &rgb)
-{
-    // running.push<Effects::StaticColor>(rgb);
-}
+
+// void Programmer::applyEffect(std::shared_ptr<Effects::EffectWrapper> eff)
+// {
+//     auto g = eff->group & m_selected;
+//     m_runningEffects.push(eff);
+// }
+
+// void Programmer::setColor(const Utils::Colors::RGB &rgb)
+// {
+//     m_staticEffects[Effects::StaticColor::GetStaticCategory()].push_back(
+//         m_runningEffects.pushRet<Effects::StaticColor>(m_selected, rgb));
+//     // running.push<Effects::StaticColor>(rgb);
+// }
 
 // void Programmer::setColorGradient(const Utils::Colors::RGB &rgb,
 //                                   const Utils::Colors::RGB &rgb2)
@@ -69,10 +71,12 @@ void Programmer::setColor(const Utils::Colors::RGB &rgb)
 //         s)));
 // }
 
-void Programmer::setIntensity(float v)
-{
-    // running.push<Effects::StaticIntensity>(v);
-}
+// void Programmer::setIntensity(float v)
+// {
+//     m_staticEffects[Effects::StaticIntensity::GetStaticCategory()].push_back(
+//         m_runningEffects.pushRet<Effects::StaticIntensity>(m_selected, v));
+//     // running.push<Effects::StaticIntensity>(v);
+// }
 
 // void Programmer::setIntensityRamp(float a, float b)
 // {
@@ -123,27 +127,44 @@ void Programmer::setIntensity(float v)
 //     return frame.all();
 // }
 
-void Programmer::apply(Frame &frame, const TimeContext &time)
-{
-    // The programmer is just a layer of effects, replayed every frame -> walk
-    // every stack in order, then every effect within it. An effect only
-    // recomputes when it is due (edited, its selection changed, or its own beat
-    // grid says a new step arrived); otherwise its cached output is replayed.
-    // for (auto &stack : running.stacks)
-    // {
-    //     const auto &group = stack.selection;
-    //     for (const auto &e : stack.effects)
-    //     {
-    //         if (!e->enabled())
-    //         {
-    //             continue;
-    //         }
-    //         if (e->due(time.now, group))
-    //         {
-    //             e->evaluate(time, group);
-    //         }
-    //         e->replay(frame);
-    //     }
-    // }
-}
+// void Programmer::apply(Frame &frame, const TimeContext &time)
+// {
+//     // The programmer is just a layer of effects, replayed every frame ->
+//     walk
+//     // every stack in order, then every effect within it. An effect only
+//     // recomputes when it is due (edited, its selection changed, or its own
+//     beat
+//     // grid says a new step arrived); otherwise its cached output is
+//     replayed. for (auto &eff : m_runningEffects.getEffects())
+//     {
+//         const auto &group = eff->group;
+//         const auto &e = eff->effect;
+//         if (!e->enabled())
+//         {
+//             continue;
+//         }
+//         if (e->due(time.now, group))
+//         {
+//             e->evaluate(time, group);
+//         }
+//         e->replay(frame);
+//     }
+
+//     // for (auto &stack : running.stacks)
+//     // {
+//     //     const auto &group = stack.selection;
+//     //     for (const auto &e : stack.effects)
+//     //     {
+//     //         if (!e->enabled())
+//     //         {
+//     //             continue;
+//     //         }
+//     //         if (e->due(time.now, group))
+//     //         {
+//     //             e->evaluate(time, group);
+//     //         }
+//     //         e->replay(frame);
+//     //     }
+//     // }
+// }
 } // namespace LightEngine::Engine

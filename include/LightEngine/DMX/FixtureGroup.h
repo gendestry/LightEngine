@@ -52,13 +52,15 @@ public:
     // Copying is fine, but being assigned over is a membership change like any
     // other: the revision must move forward, never be overwritten by the
     // source's, or a consumer's cached revision could match by coincidence.
+
+    FixtureGroup(const std::vector<FixturePtr> &fixs) { add(fixs); }
     FixtureGroup(const FixtureGroup &) = default;
     FixtureGroup(FixtureGroup &&) = default;
+
+    FixtureGroup &operator=(const std::vector<FixturePtr> &fixs);
     FixtureGroup &operator=(const FixtureGroup &other);
     FixtureGroup &operator=(FixtureGroup &&other);
     ~FixtureGroup() = default;
-
-    FixtureGroup operator&(const FixtureGroup &other) {}
 
     // Membership (ignores nulls and duplicates).
     void add(const FixturePtr &fixture);
@@ -69,10 +71,7 @@ public:
     [[nodiscard]] const std::string &name() const { return m_name; }
     void setName(std::string name) { m_name = std::move(name); }
 
-    [[nodiscard]] const std::vector<FixturePtr> &fixtures() const
-    {
-        return m_fixtures;
-    }
+    [[nodiscard]] const std::vector<FixturePtr> &fixtures() const;
 
     // The member FIDs in selection order (cached - effects walk this every
     // frame, so it must not allocate). Valid until the next membership change.
@@ -108,40 +107,10 @@ public:
 
     FixtureGroup &operator+=(const FixturePtr &fixture);
     FixtureGroup &operator+=(const FixtureGroup &other);
+    FixtureGroup &operator+=(const std::vector<FixturePtr> &fixs);
 
-    FixtureGroup FixtureGroup::operator&(const FixtureGroup &other) const
-    {
-        FixtureGroup result;
-
-        std::set<uint16_t> otherFids;
-        for (const auto &fixture : other.m_fixtures)
-        {
-            if (fixture)
-                otherFids.insert(fixture->Fid());
-        }
-
-        for (const auto &fixture : m_fixtures)
-        {
-            if (fixture && otherFids.contains(fixture->Fid()))
-                result.add(fixture);
-        }
-
-        return result;
-    }
-
-    FixtureGroup FixtureGroup::operator|(const FixtureGroup &other) const
-    {
-        FixtureGroup result;
-
-        // Left side first, preserving its order.
-        result.add(m_fixtures);
-
-        // add() already ignores duplicates, so this appends only fixtures
-        // that aren't already present.
-        result.add(other.m_fixtures);
-
-        return result;
-    }
+    FixtureGroup operator&(const FixtureGroup &other) const;
+    FixtureGroup operator|(const FixtureGroup &other) const;
 
     [[nodiscard]] std::string describe() const;
 };

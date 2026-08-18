@@ -44,19 +44,20 @@ std::vector<uint16_t> Engine::patch(const Fixtures::Fixture &fixture,
 
 void Engine::selectGroup(uint32_t num)
 {
-    // if (auto grp = m_stored.groups().get(num))
+    // if (auto grp = m_presets.groups().get(num))
     //     m_programmer.select(grp->fixtureGroup());
 }
 
 // Pools::Group &Engine::storeGroup(uint32_t num)
 // {
-// return m_stored.groups().emplaceAt(num,
-//                                    m_programmer.selection().fixtures());
+//     return m_presets.groups().emplaceAt(
+//         num, m_programmer.selectedGroup().fixtures());
 // }
 
 // Pools::Group &Engine::storeGroup()
 // {
-// return m_stored.groups().emplace(m_programmer.selection().fixtures());
+//     return
+//     m_presets.groups().emplace(m_programmer.selectedGroup().fixtures());
 // }
 
 // // ---- color presets ----
@@ -64,19 +65,27 @@ void Engine::selectGroup(uint32_t num)
 // fixture
 // // touched since the last clear() is banked, so a preset built across several
 // // selections (group then a stray fixture) keeps them all.
-// Pools::ColorPreset &Engine::storeColorPreset(uint32_t num)
+// Pools::Color &Engine::storeColorPreset(uint32_t num)
 // {
-//     auto preset = std::make_shared<Pools::ColorPreset>();
-//     for (const auto &[fid, v] : m_programmer.edits())
-//         if (v.color)
-//             preset->set(fid, {v.color->h, v.color->s});
-//     return m_stored.colorPresets().store(num, std::move(preset));
+//     // auto preset =
+//     // std::make_shared<Pools::Color>(m_programmer.getStaticColors());
+//     // for (const auto &[fid, v] : m_programmer.edits())
+//     //     if (v.color)
+//     //         preset->set(fid, {v.color->h, v.color->s});
+//     return m_presets.colors().emplaceAt(num, m_programmer.getStaticColors());
+//     // return m_presets.colors().store(num, std::move(preset));
 // }
 
 // void Engine::recallColorPreset(uint32_t num)
 // {
-//     if (auto preset = m_stored.colorPresets().get(num))
-//         preset->recall(m_programmer, m_programmer.selection());
+//     if (auto preset = m_presets.colors().get(num))
+//     {
+//         for (auto it : preset->get())
+//         {
+//             m_programmer.applyEffect(it);
+//         }
+//     }
+//     // preset->recall(m_programmer, m_programmer.selection());
 // }
 
 // // ---- dimmer presets ----

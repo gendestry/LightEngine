@@ -3,10 +3,17 @@
 
 #include "LightEngine/DMX/FixtureGroup.h"
 // #include "LightEngine/Effects/EffectFactory.h"
+#include "LightEngine/Effects/EffectGroup.h"
 #include "LightEngine/Engine/Layers/Frame.h"
 #include "LightEngine/Engine/Layers/Layer.h"
 #include "LightEngine/Engine/Patch.h"
 #include "LightEngine/Engine/TimeContext.h"
+
+#include "LightEngine/Effects/EffectBase.h"
+#include <list>
+#include <map>
+#include <memory>
+#include <vector>
 
 //
 // Layer: anything that produces values for a frame. Programmer, playback and
@@ -22,12 +29,17 @@ namespace LightEngine::Engine
 //
 // The live editing layer - what the CommandBuilder/CLI drives. Holds the user's
 // edits per fixture; a selection scopes the bulk setters.
-class Programmer : public Layer
+class Programmer //: public Layer
 {
     // The live selection: transient, ordered, cached. NOT a Pools::Group - that
     // is a stored object; this is "what I'm editing right now". Engine
     // snapshots it into a Pools::Group on storeGroup().
     Patch &m_patch; // resolves raw FIDs -> live fixtures for selection
+    Effects::EffectGroup m_runningEffects;
+    DMX::FixtureGroup m_selected;
+
+    std::map<Effects::EffectCategory, std::list<Effects::EffectWrapper>>
+        m_staticEffects;
     // Effects::EffectHolder running;
 
     // std::map<uint16_t, FixtureValues> m_edits; // FID -> touched values
@@ -42,7 +54,9 @@ class Programmer : public Layer
     // }
 
 public:
-    explicit Programmer(Patch &patch) : Layer(Priority::PROG), m_patch(patch) {}
+    explicit Programmer(Patch &patch) : m_patch(patch) {}
+    // explicit Programmer(Patch &patch) : Layer(Priority::PROG), m_patch(patch)
+    // {}
 
     // ---- selection ----
     // select() replaces the current selection, add() accumulates onto it.
@@ -52,6 +66,8 @@ public:
     void select(const std::vector<uint16_t> &fids);
     void add(const DMX::FixtureGroup &g);
     void add(const std::vector<uint16_t> &fids);
+
+    void applyEffect(std::shared_ptr<Effects::EffectWrapper> eff);
     // The live selection is the current stack's selection.
     // [[nodiscard]] const DMX::FixtureGroup &selection() const
     // {
@@ -84,19 +100,25 @@ public:
     // void clearValues() { m_edits.clear(); } // keep selection
     void clearAll()
     {
+        m_runningEffects.clear();
+        m_staticEffects.clear();
         // running.stacks.clear();
         // running.createNew(); // keep an active stack so c_ptr stays valid
     } // wipe both
 
     // int priority() const override { return 1000; } // programmer wins
-    void apply(Frame &frame, const TimeContext &time) override;
+    // void apply(Frame &frame, const TimeContext &time) override;
 
-    // A copy of the live selection - Engine wraps this into a Pools::Group on
-    // store. Keeps the programmer free of any pool-object dependency.
-    // [[nodiscard]] DMX::FixtureGroup selectedGroup() const
+    // std::list<Effects::EffectWrapper> getStaticColors()
     // {
-    //     return m_selection;
+    //     return m_staticEffects[Effects::EffectCategory::COLOR];
     // }
+
+    // // A copy of the live selection - Engine wraps this into a Pools::Group
+    // on
+    // // store. Keeps the programmer free of any pool-object dependency.
+    // [[nodiscard]] DMX::FixtureGroup selectedGroup() const { return
+    // m_selected; }
 };
 
 // class ProgrammerLayer : public Layer

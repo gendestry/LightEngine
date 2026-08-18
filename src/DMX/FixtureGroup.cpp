@@ -9,6 +9,12 @@ namespace LightEngine::DMX
 {
 FixtureGroup::FixtureGroup(std::string name) : m_name(std::move(name)) {}
 
+FixtureGroup &FixtureGroup::operator=(const std::vector<FixturePtr> &fixs)
+{
+    add(fixs);
+    return *this;
+}
+
 FixtureGroup &FixtureGroup::operator=(const FixtureGroup &other)
 {
     if (this != &other)
@@ -17,7 +23,8 @@ FixtureGroup &FixtureGroup::operator=(const FixtureGroup &other)
         m_name = other.m_name;
         m_fixtures = other.m_fixtures;
         m_usedUniverses = other.m_usedUniverses;
-        m_cacheDirty = true; // the cached pointers/fids describe the old members
+        m_cacheDirty =
+            true; // the cached pointers/fids describe the old members
         m_revision = rev + 1;
     }
     return *this;
@@ -35,6 +42,40 @@ FixtureGroup &FixtureGroup::operator=(FixtureGroup &&other)
         m_revision = rev + 1;
     }
     return *this;
+}
+
+FixtureGroup FixtureGroup::operator&(const FixtureGroup &other) const
+{
+    FixtureGroup result;
+
+    std::set<uint16_t> otherFids;
+    for (const auto &fixture : other.m_fixtures)
+    {
+        if (fixture)
+            otherFids.insert(fixture->Fid());
+    }
+
+    for (const auto &fixture : m_fixtures)
+    {
+        if (fixture && otherFids.contains(fixture->Fid()))
+            result.add(fixture);
+    }
+
+    return result;
+}
+
+FixtureGroup FixtureGroup::operator|(const FixtureGroup &other) const
+{
+    FixtureGroup result;
+
+    // Left side first, preserving its order.
+    result.add(m_fixtures);
+
+    // add() already ignores duplicates, so this appends only fixtures
+    // that aren't already present.
+    result.add(other.m_fixtures);
+
+    return result;
 }
 
 void FixtureGroup::rebuildCache() const
@@ -98,6 +139,11 @@ void FixtureGroup::clear()
     ++m_revision;
 }
 
+const std::vector<FixtureGroup::FixturePtr> &FixtureGroup::fixtures() const
+{
+    return m_fixtures;
+}
+
 const std::vector<uint16_t> &FixtureGroup::fids() const
 {
     if (m_cacheDirty)
@@ -154,7 +200,6 @@ const std::vector<Fixtures::ColorCell *> &FixtureGroup::colorCells() const
     return m_colorCells;
 }
 
-
 FixtureGroup &FixtureGroup::operator+=(const FixturePtr &fixture)
 {
     add(fixture);
@@ -164,6 +209,12 @@ FixtureGroup &FixtureGroup::operator+=(const FixturePtr &fixture)
 FixtureGroup &FixtureGroup::operator+=(const FixtureGroup &other)
 {
     add(other);
+    return *this;
+}
+
+FixtureGroup &FixtureGroup::operator+=(const std::vector<FixturePtr> &fixs)
+{
+    add(fixs);
     return *this;
 }
 

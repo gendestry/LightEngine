@@ -11,7 +11,7 @@
 #include "LightEngine/Engine/Layers/Layer.h"
 #include "LightEngine/Engine/Layers/Programmer.h"
 #include "LightEngine/Engine/Patch.h"
-// #include "LightEngine/Engine/Pools/Stored.h"
+#include "LightEngine/Engine/Pools/Presets.h"
 #include "LightEngine/Engine/TimeContext.h"
 // #include "Utils/Colors/RGB.h"
 // #include "LightEngine/Show/Sequence.h"      // TODO: playback / cues
@@ -43,9 +43,10 @@ class Engine
 
     Frame m_frame;           // per-frame merged values (rebuilt each tick)
     Programmer m_programmer; // live editing layer
-    std::vector<Layer *> m_layers = {&m_programmer}; // composed low -> high
+    std::vector<Layer *> m_layers = {}; // composed low -> high
+    // std::vector<Layer *> m_layers = {&m_programmer}; // composed low -> high
 
-    // Stored m_stored; // all object pools (groups, presets, cues...) live here
+    Presets m_presets; // all object pools (groups, presets, cues...) live here
 
     // Command subsystem (text -> AST -> actions). Held by pointer so the
     // parser/executor headers stay out of the public API.
@@ -83,15 +84,15 @@ public:
     // // Select a stored group into the programmer (replace).
     void selectGroup(uint32_t num);
     // // Snapshot the current selection into the group pool at `num` / next
-    // Pools::Group &storeGroup(uint32_t num);
-    // Pools::Group &storeGroup();
+    Pools::Group &storeGroup(uint32_t num);
+    Pools::Group &storeGroup();
 
     // // ---- color presets ----
     // // Capture the current programmer color (h,s) per selected fixture;
     // recall
     // // applies it back onto the current selection (stored fixtures only).
-    // Pools::ColorPreset &storeColorPreset(uint32_t num);
-    // void recallColorPreset(uint32_t num);
+    Pools::Color &storeColorPreset(uint32_t num);
+    void recallColorPreset(uint32_t num);
 
     // // ---- dimmer presets ----
     // // Capture the current programmer intensity (HSV.v) per selected fixture.
