@@ -1,4 +1,5 @@
 #include "LightEngine/Engine/Engine.h"
+#include "LightEngine/Effects/Static/EffectColor.h"
 
 // #include "LightEngine/Commands/CommandExecutor.h"
 // #include "LightEngine/Commands/CommandParser.h"
@@ -7,7 +8,9 @@
 
 namespace LightEngine::Engine
 {
-Engine::Engine() : m_programmer(m_patch) {} // m_patch declared first -> safe
+Engine::Engine()
+    : m_programmer(m_patch), logger("Engine")
+{}                           // m_patch declared first -> safe
 Engine::~Engine() = default; // here the command types are complete
 
 // ---- text commands ----
@@ -44,37 +47,33 @@ std::vector<uint16_t> Engine::patch(const Fixtures::Fixture &fixture,
 
 void Engine::selectGroup(uint32_t num)
 {
-    // if (auto grp = m_presets.groups().get(num))
-    //     m_programmer.select(grp->fixtureGroup());
+    if (auto grp = m_presets.groups().get(num))
+        m_programmer.select(grp->fixtureGroup());
 }
 
-// Pools::Group &Engine::storeGroup(uint32_t num)
-// {
-//     return m_presets.groups().emplaceAt(
-//         num, m_programmer.selectedGroup().fixtures());
-// }
+Pools::Group &Engine::storeGroup(uint32_t num)
+{
+    return m_presets.groups().emplaceAt(num,
+                                        m_programmer.selected().fixtures());
+}
 
-// Pools::Group &Engine::storeGroup()
-// {
-//     return
-//     m_presets.groups().emplace(m_programmer.selectedGroup().fixtures());
-// }
+Pools::Group &Engine::storeGroup()
+{
+    return m_presets.groups().emplace(m_programmer.selected().fixtures());
+}
 
 // // ---- color presets ----
 // // Captures the whole programmer, not just the current selection: every
 // fixture
 // // touched since the last clear() is banked, so a preset built across several
 // // selections (group then a stray fixture) keeps them all.
-// Pools::Color &Engine::storeColorPreset(uint32_t num)
-// {
-//     // auto preset =
-//     // std::make_shared<Pools::Color>(m_programmer.getStaticColors());
-//     // for (const auto &[fid, v] : m_programmer.edits())
-//     //     if (v.color)
-//     //         preset->set(fid, {v.color->h, v.color->s});
-//     return m_presets.colors().emplaceAt(num, m_programmer.getStaticColors());
-//     // return m_presets.colors().store(num, std::move(preset));
-// }
+Pools::Color &Engine::storeColorPreset(uint32_t num)
+{
+    return m_presets.colors().emplaceAt(
+        num,
+        std::make_shared<Effects::StaticColor>(
+            m_programmer.getStaticEffects().getColor(m_programmer.selected())));
+}
 
 // void Engine::recallColorPreset(uint32_t num)
 // {

@@ -13,6 +13,7 @@
 #include "LightEngine/Engine/Patch.h"
 #include "LightEngine/Engine/Pools/Presets.h"
 #include "LightEngine/Engine/TimeContext.h"
+#include "Utils/Logging/Logger.h"
 // #include "Utils/Colors/RGB.h"
 // #include "LightEngine/Show/Sequence.h"      // TODO: playback / cues
 
@@ -47,6 +48,7 @@ class Engine
     // std::vector<Layer *> m_layers = {&m_programmer}; // composed low -> high
 
     Presets m_presets; // all object pools (groups, presets, cues...) live here
+    Utils::Logger logger;
 
     // Command subsystem (text -> AST -> actions). Held by pointer so the
     // parser/executor headers stay out of the public API.

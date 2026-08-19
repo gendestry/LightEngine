@@ -88,6 +88,7 @@ public:
     void setIntensity(float v);
 
     StaticEffectHolder &getStaticEffects() { return m_staticEffects; }
+    const DMX::FixtureGroup &selected() const { return m_selection.get(); }
 
     // void applyHueSat(uint16_t fid, float h, float s);
     // void applyIntensity(uint16_t fid, float v);

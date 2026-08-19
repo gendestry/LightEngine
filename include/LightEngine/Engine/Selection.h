@@ -53,28 +53,8 @@ class StaticEffectHolder
 
     GroupSelection &selection;
 
-    // void addEffect(const DMX::FixtureGroup &group,
-    //                std::shared_ptr<Effects::EffectBase> eff)
-    // {
-    //     auto ptr =
-    //         std::make_shared<Effects::EffectWrapper>(group, std::move(eff));
-    //     auto cat = eff->GetEffectCategory();
-    //     groups.emplace_back(ptr);
-    //     if (cat == Effects::EffectCategory::DIMMER)
-    //     {
-    //         staticIntensity.push_back(ptr);
-    //     }
-    // }
-
-    // template<typename T>
-    // void addEffect(const DMX::FixtureGroup &group,
-    // std::shared_ptr<Effects::EffectStatic>&)
-    // {
-
-    // }
-
     std::vector<std::pair<uint16_t, FixtureValues>>
-    get(Effects::EffectCategory cat, DMX::FixtureGroup group)
+    get(Effects::EffectCategory cat, const DMX::FixtureGroup &group)
     {
         std::vector<std::pair<uint16_t, FixtureValues>> result;
         result.reserve(byType[cat].size());
@@ -118,28 +98,23 @@ public:
     void setColor(const DMX::FixtureGroup &group,
                   const Utils::Colors::RGB &color)
     {
-        // std::vector<std::pair<uint16_t, FixtureValues>> ret;
         auto hsv = color.toHSV();
 
-        // FixtureValues value;
-        // value.color = hsv;
-        // ret.reserve(group.fids().size());
         for (auto &g : group.fids())
         {
             values[g].color = hsv;
-            // ret.push_back({g, })
             byType[Effects::EffectCategory::COLOR].emplace(g);
         }
     }
 
     std::vector<std::pair<uint16_t, FixtureValues>>
-    getIntensity(DMX::FixtureGroup group)
+    getIntensity(const DMX::FixtureGroup &group)
     {
         return get(Effects::EffectCategory::DIMMER, group);
     }
 
     std::vector<std::pair<uint16_t, FixtureValues>>
-    getColor(DMX::FixtureGroup group)
+    getColor(const DMX::FixtureGroup &group)
     {
         return get(Effects::EffectCategory::COLOR, group);
     }
@@ -166,7 +141,7 @@ public:
 // {
 // struct EffectWrapper
 // {
-//     DMX::FixtureGroup group;
+//     const DMX::FixtureGroup& group;
 //     std::shared_ptr<Effects::EffectBase> effect;
 // };
 // class EffectGroup
@@ -175,7 +150,7 @@ public:
 
 // public:
 //     template <typename T, typename... Args>
-//     void push(DMX::FixtureGroup group, Args &&...args)
+//     void push(const DMX::FixtureGroup& group, Args &&...args)
 //     {
 //         EffectWrapper wrap;
 //         wrap.group = std::move(group);

@@ -1,7 +1,6 @@
 #pragma once
-#include "LightEngine/Effects/EffectGroup.h"
+#include "LightEngine/Effects/Static/EffectColor.h"
 #include "PoolObject.h"
-#include <list>
 #include <memory>
 
 namespace LightEngine::Engine::Pools
@@ -9,17 +8,13 @@ namespace LightEngine::Engine::Pools
 
 class Color : public Engine::PoolObject
 {
-    std::list<Effects::EffectWrapper> m_colors;
+    std::shared_ptr<Effects::StaticColor> m_effect;
 
 public:
-    Color(const std::list<Effects::EffectWrapper> &staticColors)
-        : m_colors(staticColors)
+    Color(std::shared_ptr<Effects::StaticColor> effect)
+        : m_effect(std::move(effect))
     {
     }
-
-    ~Color() { m_colors.clear(); }
-
-    std::list<Effects::EffectWrapper> get() { return m_colors; }
 
     std::string describe() const override
     {

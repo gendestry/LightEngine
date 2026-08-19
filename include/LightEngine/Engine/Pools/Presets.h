@@ -26,6 +26,7 @@ class Presets
     // Pool<Pools::Effect>   m_effects;    // TODO
 
 public:
+    Presets() : m_groups("Groups"), m_colors("Colors") {}
     [[nodiscard]] Pool<Pools::Group> &groups() { return m_groups; }
     [[nodiscard]] const Pool<Pools::Group> &groups() const { return m_groups; }
 

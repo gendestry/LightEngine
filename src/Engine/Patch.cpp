@@ -1,5 +1,6 @@
 #include "LightEngine/Engine/Patch.h"
 
+#include <format>
 #include <utility>
 
 namespace LightEngine::Engine
@@ -41,8 +42,12 @@ Patch::patch(const LightEngine::Fixtures::Fixture &fixture, uint16_t universe,
 {
     if (amount == 0)
     {
+        logger.error("Trying to patch 0 fixtures");
         return {};
     }
+
+    logger.debug("Patching {} fixtures at uni: {} addr: {}", amount, universe,
+                 start ? std::to_string(*start) : "auto");
 
     LightEngine::DMX::Universe &uni = ensureUniverse(universe);
 
@@ -122,13 +127,16 @@ Patch::getFixturesByName(const std::string &name) const
 
 std::string Patch::describe() const
 {
-    std::string s = "Patch [" + std::to_string(m_fixtures.size()) +
-                    " fixtures across " + std::to_string(m_universes.size()) +
-                    " universes]\n";
+    std::string desc = std::format("Patch: {} fixtures across {} universes\n",
+                                   m_fixtures.size(), m_universes.size());
+    // std::string s = "Patch [" + std::to_string(m_fixtures.size()) +
+    //                 " fixtures across " + std::to_string(m_universes.size())
+    //                 + " universes]\n";
+
     for (const auto &[id, uni] : m_universes)
     {
-        s += uni.dump();
+        desc += uni.dump();
     }
-    return s;
+    return desc;
 }
 } // namespace LightEngine::Engine

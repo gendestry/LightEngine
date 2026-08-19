@@ -16,6 +16,7 @@ template <class T> class Pool
     using Ptr = std::shared_ptr<T>;
     std::map<uint32_t, Ptr> m_items;
     std::unordered_map<std::string, uint32_t> m_byName;
+    std::string m_name;
 
     void index(const std::string &name, uint32_t num)
     {
@@ -27,6 +28,7 @@ template <class T> class Pool
     void unindex(const std::string &name) { m_byName.erase(name); }
 
 public:
+    Pool(std::string name = "PoolObject") : m_name(name) {}
     // ---- store ----------------------------------------------------------
 
     // Store into an explicit slot. Overwrites whatever was there.
