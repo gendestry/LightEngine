@@ -23,7 +23,8 @@
 //
 namespace LightEngine::DMX
 {
-class Universe : public Utils::FragmentedStorage<LightEngine::Fixtures::Fixture, 512>
+class Universe
+    : public Utils::FragmentedStorage<LightEngine::Fixtures::Fixture, 512>
 {
     using FixturePtr = std::shared_ptr<LightEngine::Fixtures::Fixture>;
 
@@ -39,11 +40,20 @@ public:
 
     // Patch a fixture into the universe and wire it to the DMX buffer.
     // Returns the placed instance(s) so callers can track identity (e.g. FIDs).
-    FixturePtr addFixture(const LightEngine::Fixtures::Fixture &fixture); // auto-place
-    FixturePtr addFixture(const LightEngine::Fixtures::Fixture &fixture,
-                          uint32_t start); // explicit address
-    std::vector<FixturePtr> addFixtures(const LightEngine::Fixtures::Fixture &fixture,
-                                        int count, uint32_t start);
+    // FixturePtr
+    // addFixture(const LightEngine::Fixtures::Fixture &fixture); // auto-place
+    // FixturePtr addFixture(const LightEngine::Fixtures::Fixture &fixture,
+    //                       uint32_t start); // explicit address
+    // std::vector<FixturePtr>
+    // addFixtures(const LightEngine::Fixtures::Fixture &fixture, int count,
+    //             uint32_t start);
+
+    FixturePtr addFixture(std::shared_ptr<Fixtures::FixtureTemplate> tmpl,
+                          uint32_t start);
+
+    std::vector<FixturePtr>
+    addFixtures(std::shared_ptr<Fixtures::FixtureTemplate> tmpl,
+                uint16_t amount, uint32_t start);
 
     [[nodiscard]] uint16_t id() const { return m_id; }
     void setId(uint16_t id) { m_id = id; }

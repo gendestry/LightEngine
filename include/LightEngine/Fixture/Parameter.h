@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <memory>
 
+#include "LightEngine/Fixture/ParameterConfig.h"
 #include "LightEngine/GDTF/LogicalChannel.h"
 
 //
@@ -25,9 +26,14 @@ class Parameter
     uint16_t m_cellIndex = 0;
 
 public:
-    Parameter() = default;
+    Parameter() = delete;
     explicit Parameter(std::shared_ptr<const GDTF::LogicalChannel> def)
         : m_def(std::move(def))
+    {
+    }
+
+    explicit Parameter(const ParameterConfig &config)
+        : m_def(config.definition), m_cellIndex(config.cellIndex)
     {
     }
 
@@ -55,6 +61,12 @@ public:
     }
 
     bool Bound() const { return m_def && m_bytes; }
+
+    void Unbind()
+    {
+        m_bytes = nullptr;
+        m_baseOffset = 0;
+    }
 
     void Write(float value)
     {

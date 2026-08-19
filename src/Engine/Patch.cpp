@@ -34,56 +34,57 @@ void Patch::registerFixture(uint16_t fid, const FixturePtr &fixture)
     m_byName[fixture->Name()].push_back(fixture);
 }
 
-std::vector<uint16_t>
-Patch::patch(const LightEngine::Fixtures::Fixture &fixture, uint16_t universe,
-             uint16_t amount, std::optional<uint32_t> start,
-             std::optional<uint16_t> startFID)
-{
-    if (amount == 0)
-    {
-        return {};
-    }
+// std::vector<uint16_t>
+// Patch::patch(const LightEngine::Fixtures::Fixture &fixture, uint16_t
+// universe,
+//              uint16_t amount, std::optional<uint32_t> start,
+//              std::optional<uint16_t> startFID)
+// {
+//     if (amount == 0)
+//     {
+//         return {};
+//     }
 
-    LightEngine::DMX::Universe &uni = ensureUniverse(universe);
+//     LightEngine::DMX::Universe &uni = ensureUniverse(universe);
 
-    std::vector<FixturePtr> placed;
-    if (start.has_value())
-    {
-        placed = uni.addFixtures(fixture, amount, *start);
-    }
-    else
-    {
-        placed.reserve(amount);
-        for (uint16_t i = 0; i < amount; ++i)
-        {
-            placed.push_back(uni.addFixture(fixture));
-        }
-    }
+//     std::vector<FixturePtr> placed;
+//     if (start.has_value())
+//     {
+//         placed = uni.addFixtures(fixture, amount, *start);
+//     }
+//     else
+//     {
+//         placed.reserve(amount);
+//         for (uint16_t i = 0; i < amount; ++i)
+//         {
+//             placed.push_back(uni.addFixture(fixture));
+//         }
+//     }
 
-    std::vector<uint16_t> fids;
-    fids.reserve(placed.size());
-    uint16_t fid = startFID.value_or(nextFreeFid());
-    for (const auto &f : placed)
-    {
-        if (f == nullptr)
-        {
-            continue; // placement failed (overlap / full)
-        }
-        while (m_usedFids.contains(fid))
-        {
-            ++fid;
-        }
-        registerFixture(fid, f);
-        fids.push_back(fid);
-        ++fid;
-    }
+//     std::vector<uint16_t> fids;
+//     fids.reserve(placed.size());
+//     uint16_t fid = startFID.value_or(nextFreeFid());
+//     for (const auto &f : placed)
+//     {
+//         if (f == nullptr)
+//         {
+//             continue; // placement failed (overlap / full)
+//         }
+//         while (m_usedFids.contains(fid))
+//         {
+//             ++fid;
+//         }
+//         registerFixture(fid, f);
+//         fids.push_back(fid);
+//         ++fid;
+//     }
 
-    if (!fids.empty())
-    {
-        markDirty(universe);
-    }
-    return fids;
-}
+//     if (!fids.empty())
+//     {
+//         markDirty(universe);
+//     }
+//     return fids;
+// }
 
 LightEngine::DMX::Universe *Patch::getUniverse(uint16_t universe)
 {

@@ -328,12 +328,25 @@ int main()
     Engine::Engine engine;
 
     auto &lib = engine.fixtureLibrary();
-    auto rgb = lib.find("RGB").value();
+    auto rgb = lib.find("RGB");
 
     // RGB fixtures (3 channels each) across three universes.
     auto fids8 = engine.patch(rgb, 8, 10);
     // auto fids9 = engine.patch(rgb, 9, 10);
     // auto fids10 = engine.patch(rgb, 10, 11);
+
+    DMX::Universe uni(1);
+    auto f = uni.addFixtures(rgb, 10, 0);
+    // std::cout << f[0]->describe() << std::endl << uni.dump() << std::endl;
+    Engine::FixtureValues value;
+    value.color = Utils::Colors::HSV(0, 1.f, 1.f);
+    value.intensity = 1.f;
+    f[0]->Resolve(value);
+    value.intensity = 0.5f;
+
+    f[1]->Resolve(value);
+    std::cout << uni.dump();
+    return 0;
 
     auto &prog = engine.programmer();
     prog.select(fids8);

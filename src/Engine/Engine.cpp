@@ -31,13 +31,13 @@ Engine::~Engine() = default; // here the command types are complete
 // }
 
 // ---- patching ----
-std::vector<uint16_t> Engine::patch(const Fixtures::Fixture &fixture,
-                                    uint16_t universe, uint16_t amount,
-                                    std::optional<uint32_t> start,
-                                    std::optional<uint16_t> startFID)
-{
-    return m_patch.patch(fixture, universe, amount, start, startFID);
-}
+// std::vector<uint16_t> Engine::patch(const Fixtures::Fixture &fixture,
+//                                     uint16_t universe, uint16_t amount,
+//                                     std::optional<uint32_t> start,
+//                                     std::optional<uint16_t> startFID)
+// {
+//     return m_patch.patch(fixture, universe, amount, start, startFID);
+// }
 
 // ---- programmer ----
 // void Engine::clear() { m_programmer.clearAll(); }

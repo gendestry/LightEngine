@@ -36,15 +36,20 @@ Fixture::Fixture(std::string name) : m_name(std::move(name)) {}
 std::string Fixture::describe() const
 {
     std::stringstream ss;
-    ss << "FID: " << m_fid << " \"" << m_name << "\" [" << size << " bytes]";
+    ss << "FID: " << m_fid << " \"" << m_name << "\" [" << size
+       << " bytes, ccells: " << std::to_string(m_colorCells.size()) << "]";
     return ss.str();
 }
 
 Fixture::Fixture(const Fixture &other)
     : Utils::Fragment(other), m_name(other.m_name), m_fid(other.m_fid),
-      m_universe(other.m_universe), m_buffer(other.m_buffer),
+      m_universe(other.m_universe), m_buffer(nullptr),
       m_parameters(other.m_parameters)
 {
+    for (Parameter &p : m_parameters)
+    {
+        p.Unbind();
+    }
     // rebuild index + cells so their pointers aim at OUR parameters
     Build();
 }
@@ -57,8 +62,13 @@ Fixture &Fixture::operator=(const Fixture &other)
         m_name = other.m_name;
         m_fid = other.m_fid;
         m_universe = other.m_universe;
-        m_buffer = other.m_buffer;
+        m_buffer = nullptr;
         m_parameters = other.m_parameters;
+
+        for (Parameter &p : m_parameters)
+        {
+            p.Unbind();
+        }
         Build();
     }
     return *this;
@@ -73,7 +83,7 @@ Parameter &Fixture::Add(std::shared_ptr<const GDTF::LogicalChannel> def,
 
     Parameter &p = m_parameters.emplace_back(std::move(def));
     p.SetCellIndex(cellIndex);
-    std::println("Cell index {}", cellIndex);
+    // std::println("Cell index {}", cellIndex);
     return p;
 }
 
@@ -107,15 +117,17 @@ void Fixture::Build()
 
     // drop cells with no color components (e.g. a lone dimmer on a non-color
     // fixture shouldn't masquerade as a color emitter).
-    m_colorCells.erase(std::remove_if(m_colorCells.begin(), m_colorCells.end(),
-                                      [](const ColorCell &c)
-                                      { return c.IsEmpty(); }),
-                       m_colorCells.end());
+    // m_colorCells.erase(std::remove_if(m_colorCells.begin(),
+    // m_colorCells.end(),
+    //                                   [](const ColorCell &c)
+    //                                   { return c.IsEmpty(); }),
+    //                    m_colorCells.end());
 }
 
 void Fixture::setStart(uint32_t start)
 {
-    Utils::Fragment::setStart(start);
+    this->start = start;
+    // Utils::Fragment::setStart(start);
     for (Parameter &p : m_parameters)
     {
         p.SetBaseOffset(start);
@@ -135,6 +147,17 @@ void Fixture::Bind(uint8_t *buffer, uint32_t start)
 {
     setStart(start);
     setBuffer(buffer);
+}
+
+void Fixture::Unbind()
+{
+    m_buffer = nullptr;
+    start = 0;
+
+    for (Parameter &p : m_parameters)
+    {
+        p.Unbind();
+    }
 }
 
 bool Fixture::Has(GDTF::Attribute attr) const

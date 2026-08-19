@@ -7,6 +7,7 @@
 
 #include "LightEngine/Engine/Layers/Frame.h"
 #include "LightEngine/Fixture/ColorCell.h"
+#include "LightEngine/Fixture/FixtureConfig.h"
 #include "LightEngine/Fixture/Parameter.h"
 #include "LightEngine/GDTF/LogicalChannel.h"
 #include "Utils/Storage/FragmentedStorage.h"
@@ -29,6 +30,7 @@ namespace LightEngine::Fixtures
 {
 class Fixture : public Utils::Fragment
 {
+    std::shared_ptr<FixtureTemplate> m_config;
     std::string m_name = "fixture";
     uint16_t m_fid = 0;
     uint16_t m_universe = 0;
@@ -47,6 +49,17 @@ public:
     Fixture(const Fixture &other);
     Fixture &operator=(const Fixture &other);
 
+    explicit Fixture(std::shared_ptr<FixtureTemplate> tmpl)
+        : m_config(std::move(tmpl))
+    {
+        for (const auto &config : m_config->parameters)
+        {
+            Add(config.definition, config.cellIndex);
+        }
+
+        Build();
+    }
+
     // ---- build ----
     // Append a parameter from a shared definition, tagged with its
     // emitter/cell.
@@ -60,6 +73,7 @@ public:
     void setBuffer(uint8_t *buffer);
     // Convenience for standalone use (universe does the two hooks itself).
     void Bind(uint8_t *buffer, uint32_t start);
+    void Unbind();
 
     // ---- generic attribute access (pan, tilt, gobo, ...) ----
     bool Has(GDTF::Attribute attr) const;

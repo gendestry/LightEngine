@@ -52,54 +52,107 @@ void Universe::reindex()
     }
 }
 
-Universe::FixturePtr Universe::addFixture(const Fixture &fixture)
-{
-    const auto before = snapshot(m_fragments);
-    add(fixture);
-    wireBuffers();
-    reindex();
-    for (const auto &f : m_fragments)
-    {
-        if (!before.contains(f.get()))
-        {
-            return f;
-        }
-    }
-    return nullptr;
-}
+// Universe::FixturePtr Universe::addFixture(const Fixture &fixture)
+// {
+//     const auto before = snapshot(m_fragments);
+//     add(fixture);
+//     wireBuffers();
+//     reindex();
+//     for (const auto &f : m_fragments)
+//     {
+//         if (!before.contains(f.get()))
+//         {
+//             return f;
+//         }
+//     }
+//     return nullptr;
+// }
 
-Universe::FixturePtr Universe::addFixture(const Fixture &fixture, uint32_t start)
+// Universe::FixturePtr Universe::addFixture(const Fixture &fixture,
+//                                           uint32_t start)
+// {
+//     const auto before = snapshot(m_fragments);
+//     add(fixture, start);
+//     wireBuffers();
+//     reindex();
+//     for (const auto &f : m_fragments)
+//     {
+//         if (!before.contains(f.get()))
+//         {
+//             return f;
+//         }
+//     }
+//     return nullptr;
+// }
+
+// std::vector<Universe::FixturePtr>
+// Universe::addFixtures(const Fixture &fixture, int count, uint32_t start)
+// {
+//     const auto before = snapshot(m_fragments);
+//     addMultiple(fixture, count, static_cast<int>(start));
+//     wireBuffers();
+//     reindex();
+//     std::vector<FixturePtr> placed;
+//     for (const auto &f : m_fragments)
+//     {
+//         if (!before.contains(f.get()))
+//         {
+//             placed.push_back(f);
+//         }
+//     }
+//     return placed;
+// }
+
+Universe::FixturePtr
+Universe::addFixture(std::shared_ptr<Fixtures::FixtureTemplate> tmpl,
+                     uint32_t start)
 {
-    const auto before = snapshot(m_fragments);
-    add(fixture, start);
-    wireBuffers();
+    auto fixture = std::make_shared<Fixture>(std::move(tmpl));
+
+    // The fixture is now a runtime instance,
+    // but isn't associated with the Universe yet.
+
+    fixture->SetUniverse(m_id);
+
+    // Bind runtime DMX state.
+    fixture->Bind(getBytes(), start);
+
+    // Add it to the Universe's fragment storage.
+    //
+    // This depends on the API of FragmentedStorage.
+    add(fixture);
+
     reindex();
-    for (const auto &f : m_fragments)
-    {
-        if (!before.contains(f.get()))
-        {
-            return f;
-        }
-    }
-    return nullptr;
+
+    return fixture;
 }
 
 std::vector<Universe::FixturePtr>
-Universe::addFixtures(const Fixture &fixture, int count, uint32_t start)
+Universe::addFixtures(std::shared_ptr<Fixtures::FixtureTemplate> tmpl,
+                      uint16_t amount, uint32_t start)
 {
-    const auto before = snapshot(m_fragments);
-    addMultiple(fixture, count, static_cast<int>(start));
-    wireBuffers();
-    reindex();
-    std::vector<FixturePtr> placed;
-    for (const auto &f : m_fragments)
+    std::vector<FixturePtr> result;
+    result.reserve(amount);
+
+    uint32_t current = start;
+
+    for (uint16_t i = 0; i < amount; ++i)
     {
-        if (!before.contains(f.get()))
-        {
-            placed.push_back(f);
-        }
+        auto fixture = std::make_shared<Fixture>(tmpl);
+
+        add(fixture, current);
+
+        fixture->setBuffer(getBytes());
+        fixture->SetUniverse(m_id);
+
+        result.push_back(fixture);
+
+        current += fixture->size;
     }
-    return placed;
+
+    reindex();
+
+    return result;
 }
 
 Universe::FixturePtr Universe::at(std::size_t index) const
@@ -128,7 +181,8 @@ std::string Universe::dump(int channels) const
 {
     namespace F = Utils::Font;
 
-    // map every channel to the index of the fixture that owns it (-1 = unpatched)
+    // map every channel to the index of the fixture that owns it (-1 =
+    // unpatched)
     std::vector<int> owner(512, -1);
     int idx = 0;
     for (const auto &f : m_fragments)

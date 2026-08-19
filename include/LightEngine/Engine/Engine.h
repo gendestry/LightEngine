@@ -60,9 +60,9 @@ public:
     // ---- patching (template overload; name overload needs FixtureLibrary)
     // ----
     std::vector<uint16_t>
-    patch(const Fixtures::Fixture &fixture, uint16_t universe, uint16_t amount,
-          std::optional<uint32_t> start = std::nullopt,
-          std::optional<uint16_t> startFID = std::nullopt);
+    patch(std::shared_ptr<LightEngine::Fixtures::FixtureTemplate> tmpl,
+          uint16_t universe, uint16_t amount, std::optional<uint32_t> start,
+          std::optional<uint16_t> startFID);
 
     // // ---- stored pools ----
     // [[nodiscard]] Stored &stored() { return m_stored; }
