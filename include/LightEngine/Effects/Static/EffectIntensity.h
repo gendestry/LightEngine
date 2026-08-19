@@ -1,6 +1,6 @@
 #pragma once
 
-#include "LightEngine/Effects/EffectBase.h"
+#include "LightEngine/Effects/Static/EffectBaseStatic.h"
 #include <utility>
 
 //
@@ -17,6 +17,12 @@ class StaticIntensity : public EffectStatic
 
 public:
     StaticIntensity(float level) : m_level(level) {}
+    StaticIntensity(
+        const std::vector<std::pair<uint16_t, Engine::FixtureValues>> &vals)
+        : EffectStatic(vals)
+    {
+    }
+
     void setLevel(float level)
     {
         m_level = level;

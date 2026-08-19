@@ -76,6 +76,7 @@ public:
     // The member FIDs in selection order (cached - effects walk this every
     // frame, so it must not allocate). Valid until the next membership change.
     [[nodiscard]] const std::vector<uint16_t> &fids() const;
+    [[nodiscard]] std::set<uint16_t> fidsSet() const;
 
     // Order-independent hash over the member fids: two groups holding the
     // same fixtures hash the same regardless of insertion order. For identity

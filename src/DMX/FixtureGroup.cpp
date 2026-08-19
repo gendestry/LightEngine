@@ -153,6 +153,17 @@ const std::vector<uint16_t> &FixtureGroup::fids() const
     return m_fids;
 }
 
+std::set<uint16_t> FixtureGroup::fidsSet() const
+{
+    std::set<uint16_t> ret;
+    for (auto &fid : m_fids)
+    {
+        ret.insert(fid);
+    }
+
+    return ret;
+}
+
 std::size_t FixtureGroup::fidsHash() const
 {
     std::vector<uint16_t> ids = fids(); // a copy: fids() is the live cache

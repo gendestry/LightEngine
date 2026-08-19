@@ -7,6 +7,7 @@
 #include "LightEngine/Engine/Layers/Frame.h"
 #include "LightEngine/Engine/Layers/Layer.h"
 #include "LightEngine/Engine/Patch.h"
+#include "LightEngine/Engine/Selection.h"
 #include "LightEngine/Engine/TimeContext.h"
 
 #include "LightEngine/Effects/EffectBase.h"
@@ -36,10 +37,11 @@ class Programmer //: public Layer
     // snapshots it into a Pools::Group on storeGroup().
     Patch &m_patch; // resolves raw FIDs -> live fixtures for selection
     Effects::EffectGroup m_runningEffects;
-    DMX::FixtureGroup m_selected;
+    GroupSelection m_selection;
+    StaticEffectHolder m_staticEffects;
 
-    std::map<Effects::EffectCategory, std::list<Effects::EffectWrapper>>
-        m_staticEffects;
+    // std::map<Effects::EffectCategory, std::list<Effects::EffectWrapper>>
+    //     m_staticEffects;
     // Effects::EffectHolder running;
 
     // std::map<uint16_t, FixtureValues> m_edits; // FID -> touched values
@@ -54,7 +56,10 @@ class Programmer //: public Layer
     // }
 
 public:
-    explicit Programmer(Patch &patch) : m_patch(patch) {}
+    explicit Programmer(Patch &patch)
+        : m_patch(patch), m_staticEffects(m_selection)
+    {
+    }
     // explicit Programmer(Patch &patch) : Layer(Priority::PROG), m_patch(patch)
     // {}
 
@@ -81,6 +86,8 @@ public:
     //                       const Utils::Colors::RGB &rgb2);
     // void setHueSat(float h, float s);
     void setIntensity(float v);
+
+    StaticEffectHolder &getStaticEffects() { return m_staticEffects; }
 
     // void applyHueSat(uint16_t fid, float h, float s);
     // void applyIntensity(uint16_t fid, float v);

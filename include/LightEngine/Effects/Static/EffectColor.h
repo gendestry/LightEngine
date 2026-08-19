@@ -5,7 +5,7 @@
 #include "Utils/Colors/RGB.h"
 // #include ""
 
-#include "LightEngine/Effects/EffectBase.h"
+#include "LightEngine/Effects/Static/EffectBaseStatic.h"
 
 //
 // Concrete effects. Static ones ignore time; dynamic ones animate off the
@@ -22,11 +22,23 @@ class StaticColor : public EffectStatic
 
 public:
     StaticColor(Utils::Colors::RGB color) : m_color(color) {}
+    StaticColor(
+        const std::vector<std::pair<uint16_t, Engine::FixtureValues>> &vals)
+        : EffectStatic(vals)
+    {
+    }
     void setColor(Utils::Colors::RGB color)
     {
         m_color = color;
         markDirty();
     }
+
+    // virtual void setCache(
+    //     const std::vector<std::pair<uint16_t, Engine::FixtureValues>> &vals)
+    //     override
+    // {
+    //     m_cache = vals;
+    // }
 
 protected:
     void recompute(const Engine::TimeContext &t,

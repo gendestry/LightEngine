@@ -169,6 +169,13 @@ public:
     void setEnabled(bool enabled) { m_enabled = enabled; }
     [[nodiscard]] bool enabled() const { return m_enabled; }
 
+    [[nodiscard]] const std::vector<
+        std::pair<uint16_t, Engine::FixtureValues>> &
+    getValues()
+    {
+        return m_cache;
+    }
+
     virtual EffectType GetEffectType() const = 0;
     virtual const char *GetTypeName() const = 0;
 
@@ -176,15 +183,6 @@ public:
     virtual const char *GetCategoryName() const = 0;
 
     // virtual std::string describe() const = 0;
-};
-
-class EffectStatic : public EffectBase
-{
-public:
-    // EffectStatic() : EffectBase(EffectType::STATIC) {}
-    EffectStatic() : EffectBase() {}
-
-    EFFECT_TYPE(STATIC);
 };
 
 class EffectAnimated : public EffectBase
