@@ -42,7 +42,7 @@ std::string Fixture::describe() const
 
 Fixture::Fixture(const Fixture &other)
     : Utils::Fragment(other), m_name(other.m_name), m_fid(other.m_fid),
-      m_universe(other.m_universe), m_buffer(other.m_buffer),
+      /*m_universe(other.m_universe),*/ m_buffer(other.m_buffer),
       m_parameters(other.m_parameters)
 {
     // rebuild index + cells so their pointers aim at OUR parameters
@@ -56,7 +56,7 @@ Fixture &Fixture::operator=(const Fixture &other)
         Utils::Fragment::operator=(other);
         m_name = other.m_name;
         m_fid = other.m_fid;
-        m_universe = other.m_universe;
+        // m_universe = other.m_universe;
         m_buffer = other.m_buffer;
         m_parameters = other.m_parameters;
         Build();
@@ -107,10 +107,11 @@ void Fixture::Build()
 
     // drop cells with no color components (e.g. a lone dimmer on a non-color
     // fixture shouldn't masquerade as a color emitter).
-    m_colorCells.erase(std::remove_if(m_colorCells.begin(), m_colorCells.end(),
-                                      [](const ColorCell &c)
-                                      { return c.IsEmpty(); }),
-                       m_colorCells.end());
+    // m_colorCells.erase(std::remove_if(m_colorCells.begin(),
+    // m_colorCells.end(),
+    //                                   [](const ColorCell &c)
+    //                                   { return c.IsEmpty(); }),
+    //                    m_colorCells.end());
 }
 
 void Fixture::setStart(uint32_t start)

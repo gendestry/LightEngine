@@ -113,7 +113,7 @@ void FixtureGroup::add(const FixturePtr &fixture)
         return;
     }
     m_fixtures.push_back(fixture);
-    m_usedUniverses.insert(fixture->Universe());
+    // m_usedUniverses.insert(fixture->Universe());
     m_cacheDirty = true;
     ++m_revision;
 }

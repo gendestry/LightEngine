@@ -144,6 +144,11 @@ public:
         return get(Effects::EffectCategory::COLOR, group);
     }
 
+    const std::map<uint16_t, FixtureValues> &getValues() const
+    {
+        return values;
+    }
+
     void clear()
     {
         values.clear();

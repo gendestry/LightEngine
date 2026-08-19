@@ -337,6 +337,18 @@ int main()
 
     auto &prog = engine.programmer();
     prog.select(fids8);
+    prog.setColor({255, 0, 0});
+    prog.setIntensity(1.f);
+
+    auto &h = prog.getStaticEffects().getValues();
+    for (auto &[k, v] : h)
+    {
+        // const auto vals = h;
+        engine.patcher().getFixture(k)->Resolve(v);
+    }
+    std::cout << engine.patcher().describe();
+    return 0;
+    // for()
     // engine.storeGroup();
     // prog.clearAll();
     // prog.select(fids9);
@@ -375,18 +387,18 @@ int main()
     {
         engine.update(dt);
 
-        std::cout << std::setw(5) << i << std::setw(7) << std::fixed
-                  << std::setprecision(3) << engine.time().now << "   ";
+        // std::cout << std::setw(5) << i << std::setw(7) << std::fixed
+        //           << std::setprecision(3) << engine.time().now << "   ";
         for (uint16_t fid : fids8)
         {
             // R is the fixture's first channel; read it straight out of the
-            // universe buffer, i.e. the bytes that would go on the wire.
-            const auto fx = engine.patcher().getFixture(fid);
-            const auto &buf =
-                engine.patcher().universes().at(fx->Universe()).buffer();
-            std::cout << std::setw(4) << static_cast<int>(buf[fx->start]);
+            // // universe buffer, i.e. the bytes that would go on the wire.
+            // const auto fx = engine.patcher().getFixture(fid);
+            // const auto &buf =
+            //     engine.patcher().universes().at(fx->Universe()).buffer();
+            // std::cout << std::setw(4) << static_cast<int>(buf[fx->start]);
         }
-        std::cout << "\n";
+        // std::cout << "\n";
     }
 
     std::cout << "\nfinal universe state:\n";

@@ -127,7 +127,7 @@ std::string Patch::describe() const
                     " universes]\n";
     for (const auto &[id, uni] : m_universes)
     {
-        s += uni.describe();
+        s += uni.dump();
     }
     return s;
 }

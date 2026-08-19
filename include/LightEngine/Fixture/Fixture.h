@@ -31,7 +31,7 @@ class Fixture : public Utils::Fragment
 {
     std::string m_name = "fixture";
     uint16_t m_fid = 0;
-    uint16_t m_universe = 0;
+    // uint16_t m_universe = 0;
     uint8_t *m_buffer = nullptr; // -> universe buffer (non-owning)
 
     std::vector<Parameter> m_parameters;
@@ -84,8 +84,8 @@ public:
     const std::string &Name() const { return m_name; }
     uint16_t Fid() const { return m_fid; }
     void SetFid(uint16_t fid) { m_fid = fid; }
-    uint16_t Universe() const { return m_universe; }
-    void SetUniverse(uint16_t universe) { m_universe = universe; }
+    // uint16_t Universe() const { return m_universe; }
+    // void SetUniverse(uint16_t universe) { m_universe = universe; }
     uint32_t Footprint() const { return size; }
     const std::vector<Parameter> &Parameters() const { return m_parameters; }
     const std::map<GDTF::Attribute, std::vector<Parameter *>> &

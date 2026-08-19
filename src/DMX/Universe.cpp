@@ -39,7 +39,7 @@ void Universe::wireBuffers()
     for (const auto &f : m_fragments)
     {
         f->setBuffer(getBytes());
-        f->SetUniverse(m_id);
+        // f->SetUniverse(m_id);
     }
 }
 
@@ -68,7 +68,8 @@ Universe::FixturePtr Universe::addFixture(const Fixture &fixture)
     return nullptr;
 }
 
-Universe::FixturePtr Universe::addFixture(const Fixture &fixture, uint32_t start)
+Universe::FixturePtr Universe::addFixture(const Fixture &fixture,
+                                          uint32_t start)
 {
     const auto before = snapshot(m_fragments);
     add(fixture, start);
@@ -128,7 +129,8 @@ std::string Universe::dump(int channels) const
 {
     namespace F = Utils::Font;
 
-    // map every channel to the index of the fixture that owns it (-1 = unpatched)
+    // map every channel to the index of the fixture that owns it (-1 =
+    // unpatched)
     std::vector<int> owner(512, -1);
     int idx = 0;
     for (const auto &f : m_fragments)
