@@ -1,6 +1,6 @@
-#include "LightEngine/Engine/DMXOutput.h"
+#include "LightEngine/Output/DMXOutput.h"
 
-namespace LightEngine::Engine
+namespace LightEngine::Output
 {
 DMXOutput::DMXOutput(const std::string &ip) { m_ip.setIP(ip); }
 
@@ -42,16 +42,16 @@ void DMXOutput::send(const LightEngine::DMX::Universe &universe)
     ensureSender(universe.id()).send(universe.buffer());
 }
 
-void DMXOutput::update(const std::set<uint16_t> &dirty, Patch &patch)
+void DMXOutput::update(const std::set<uint16_t> &dirty, Engine::Patch &patch)
 {
     for (uint16_t universe : dirty)
         if (const LightEngine::DMX::Universe *uni = patch.getUniverse(universe))
             send(*uni);
 }
 
-void DMXOutput::sendAll(Patch &patch)
+void DMXOutput::sendAll(Engine::Patch &patch)
 {
     for (const auto &[id, uni] : patch.universes())
         send(uni);
 }
-} // namespace LightEngine::Engine
+} // namespace LightEngine::Output

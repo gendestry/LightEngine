@@ -125,13 +125,10 @@ Patch::getFixturesByName(const std::string &name) const
     return it != m_byName.end() ? it->second : empty;
 }
 
-std::string Patch::describe() const
+std::string Patch::toString() const
 {
     std::string desc = std::format("Patch: {} fixtures across {} universes\n",
                                    m_fixtures.size(), m_universes.size());
-    // std::string s = "Patch [" + std::to_string(m_fixtures.size()) +
-    //                 " fixtures across " + std::to_string(m_universes.size())
-    //                 + " universes]\n";
 
     for (const auto &[id, uni] : m_universes)
     {

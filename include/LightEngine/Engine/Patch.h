@@ -23,7 +23,7 @@
 //
 namespace LightEngine::Engine
 {
-class Patch
+class Patch : public Utils::Traits::Stringify
 {
     using FixturePtr = std::shared_ptr<LightEngine::Fixtures::Fixture>;
 
@@ -43,21 +43,7 @@ class Patch
 
 public:
     Patch() : logger("Patch") {}
-    // [[nodiscard]] FixtureLibrary& library() { return m_library; }   // TODO
 
-    // Patch `amount` copies of a definition into `universe` by NAME (needs the
-    // library). TODO: re-enable once FixtureLibrary/loadGDTF exists.
-    // std::vector<uint16_t> patch(const std::string& fixtureName, uint16_t
-    // universe,
-    //                             uint16_t amount,
-    //                             std::optional<uint32_t> start = std::nullopt,
-    //                             std::optional<uint16_t> startFID =
-    //                             std::nullopt);
-
-    // Patch `amount` copies of a fixture template into `universe`. If `start`
-    // is given the copies are packed contiguously from that channel, otherwise
-    // each is auto-placed in the first free gap. FIDs are sequential from
-    // `startFID` (skipping used ones) or auto-assigned. Returns the FIDs.
     std::vector<uint16_t>
     patch(const LightEngine::Fixtures::Fixture &fixture, uint16_t universe,
           uint16_t amount, std::optional<uint32_t> start = std::nullopt,
@@ -97,6 +83,6 @@ public:
     void markDirty(uint16_t universe) { m_dirty.insert(universe); }
     void clearDirty() { m_dirty.clear(); }
 
-    [[nodiscard]] std::string describe() const;
+    [[nodiscard]] std::string toString() const override;
 };
 } // namespace LightEngine::Engine

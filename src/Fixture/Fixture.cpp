@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <print>
-#include <sstream>
+// #include <sstream>
 #include <utility>
 
 namespace LightEngine::Fixtures
@@ -33,11 +33,12 @@ bool isColorAttribute(GDTF::Attribute attr)
 
 Fixture::Fixture(std::string name) : m_name(std::move(name)) {}
 
-std::string Fixture::describe() const
+std::string Fixture::toString() const
 {
-    std::stringstream ss;
-    ss << "FID: " << m_fid << " \"" << m_name << "\" [" << size << " bytes]";
-    return ss.str();
+    // std::stringstream ss;
+    // ss << "FID: " << m_fid << " \"" << m_name << "\" [" << size << " bytes]";
+    return Utils::String::format("Fixture '{}':  fid: {}, size: {} bytes",
+                                 m_name, m_fid, size);
 }
 
 Fixture::Fixture(const Fixture &other)
@@ -73,7 +74,7 @@ Parameter &Fixture::Add(std::shared_ptr<const GDTF::LogicalChannel> def,
 
     Parameter &p = m_parameters.emplace_back(std::move(def));
     p.SetCellIndex(cellIndex);
-    std::println("Cell index {}", cellIndex);
+    // std::println("Cell index {}", cellIndex);
     return p;
 }
 

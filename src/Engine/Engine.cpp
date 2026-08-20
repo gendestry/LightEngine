@@ -8,9 +8,11 @@
 
 namespace LightEngine::Engine
 {
-Engine::Engine()
-    : m_programmer(m_patch), logger("Engine")
-{}                           // m_patch declared first -> safe
+Engine::Engine() : m_programmer(m_patch), logger("Engine")
+{
+    m_output.setIP(m_config.ip);
+    m_output.setSourceName(m_config.name);
+} // m_patch declared first -> safe
 Engine::~Engine() = default; // here the command types are complete
 
 // ---- text commands ----
@@ -48,13 +50,19 @@ std::vector<uint16_t> Engine::patch(const Fixtures::Fixture &fixture,
 void Engine::selectGroup(uint32_t num)
 {
     if (auto grp = m_presets.groups().get(num))
+    {
         m_programmer.select(grp->fixtureGroup());
+        logger.debug("Selected Group {}", num);
+    }
+    else
+    {
+        logger.error("Group {} does not exist", num);
+    }
 }
 
 Pools::Group &Engine::storeGroup(uint32_t num)
 {
-    return m_presets.groups().emplaceAt(num,
-                                        m_programmer.selected().fixtures());
+    return m_presets.groups().emplaceAt(num, m_programmer.selected().fixtures());
 }
 
 Pools::Group &Engine::storeGroup()
@@ -63,8 +71,7 @@ Pools::Group &Engine::storeGroup()
 }
 
 // // ---- color presets ----
-// // Captures the whole programmer, not just the current selection: every
-// fixture
+// // Captures the whole programmer, not just the current selection: every fixture
 // // touched since the last clear() is banked, so a preset built across several
 // // selections (group then a stray fixture) keeps them all.
 Pools::Color &Engine::storeColorPreset(uint32_t num)
@@ -175,8 +182,6 @@ Pools::Color &Engine::storeColorPreset(uint32_t num)
 //     m_output.setSourceName(name);
 // }
 
-std::string Engine::describe() const { return m_patch.describe(); }
-
 void Engine::update(float dt)
 {
     // advance the frame clock before composing, so every layer samples a
@@ -185,41 +190,50 @@ void Engine::update(float dt)
     m_time.now += dt;
     ++m_time.frame;
 
-    m_patch.blackout();
+    // m_patch.blackout();
 
     // 1. compose: layers write their contributions into the frame, composed
     // in
     //    priority order (low -> high) so higher layers' LTP writes win.
-    m_frame.clear();
-    std::stable_sort(m_layers.begin(), m_layers.end(),
-                     [](const Layer *a, const Layer *b)
-                     { return a->priority() < b->priority(); });
-    for (Layer *layer : m_layers)
-    {
-        if (layer->enabled())
-        {
-            layer->apply(m_frame, m_time);
-        }
-    }
+    // m_frame.clear();
+    // std::stable_sort(m_layers.begin(), m_layers.end(),
+    //                  [](const Layer *a, const Layer *b)
+    //                  { return a->priority() < b->priority(); });
+    // for (Layer *layer : m_layers)
+    // {
+    //     if (layer->enabled())
+    //     {
+    //         layer->apply(m_frame, m_time);
+    //     }
+    // }
 
     // 2. resolve: push each fixture's merged values into its DMX buffer.
     //    Fixtures are stateless sinks - anything not addressed this frame stays
     //    at the blackout value.
-    for (const auto &[fid, values] : m_frame.all())
-    {
-        if (auto fixture = m_patch.getFixture(fid))
-        {
-            fixture->Resolve(values);
-        }
-    }
+    // for (const auto &[fid, values] : m_frame.all())
+    // {
+    //     if (auto fixture = m_patch.getFixture(fid))
+    //     {
+    //         fixture->Resolve(values);
+    //     }
+    // }
 
     // 3. output: continuous full-frame send, as a real sACN source does.
     // Only
     //    once an IP has been configured (setIP), else this is a render-only
-    //     run.if (m_outputEnabled)
-    // {
-    //     m_output.sendAll(m_patch);
-    // }
+    //     run.
+    if (m_config.output)
+    {
+        m_output.sendAll(m_patch);
+    }
     m_patch.clearDirty();
+}
+
+std::string Engine::toString() const
+{
+    Utils::Text::Stream s;
+    s << m_config.toString() << "\n";
+    s << m_patch.toString();
+    return s.end();
 }
 } // namespace LightEngine::Engine

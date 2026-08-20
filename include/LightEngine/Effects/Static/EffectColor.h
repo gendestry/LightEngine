@@ -23,7 +23,7 @@ class StaticColor : public EffectStatic
 public:
     StaticColor(Utils::Colors::RGB color) : m_color(color) {}
     StaticColor(
-        const std::vector<std::pair<uint16_t, Engine::FixtureValues>> &vals)
+        const std::vector<std::pair<uint16_t, LightEngine::Engine::FixtureValues>> &vals)
         : EffectStatic(vals)
     {
     }
@@ -34,14 +34,14 @@ public:
     }
 
     // virtual void setCache(
-    //     const std::vector<std::pair<uint16_t, Engine::FixtureValues>> &vals)
+    //     const std::vector<std::pair<uint16_t, LightEngine::Engine::FixtureValues>> &vals)
     //     override
     // {
     //     m_cache = vals;
     // }
 
 protected:
-    void recompute(const Engine::TimeContext &t,
+    void recompute(const LightEngine::Engine::TimeContext &t,
                    const DMX::FixtureGroup &group) override;
 
 public:

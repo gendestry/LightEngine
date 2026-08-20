@@ -21,11 +21,11 @@
 // DMX) can be introduced later by turning m_senders into a map of an abstract
 // sender type; the send()/update()/sendAll() surface stays the same.
 //
-namespace LightEngine::Engine
+namespace LightEngine::Output
 {
 class DMXOutput
 {
-    Utils::Network::IP m_ip;               // local/source interface
+    Utils::Network::IP m_ip; // local/source interface
     std::string m_sourceName = "Mixer";
     std::map<uint16_t, Utils::Network::SacnSender> m_senders; // by universe id
 
@@ -43,9 +43,9 @@ public:
     void send(const LightEngine::DMX::Universe &universe);
 
     // Send only the universes in `dirty` (looked up in `patch`).
-    void update(const std::set<uint16_t> &dirty, Patch &patch);
+    void update(const std::set<uint16_t> &dirty, Engine::Patch &patch);
 
     // Send every universe in the patch.
-    void sendAll(Patch &patch);
+    void sendAll(Engine::Patch &patch);
 };
-} // namespace LightEngine::Engine
+} // namespace LightEngine::Output

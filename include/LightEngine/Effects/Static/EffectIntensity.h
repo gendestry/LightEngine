@@ -18,7 +18,7 @@ class StaticIntensity : public EffectStatic
 public:
     StaticIntensity(float level) : m_level(level) {}
     StaticIntensity(
-        const std::vector<std::pair<uint16_t, Engine::FixtureValues>> &vals)
+        const std::vector<std::pair<uint16_t, LightEngine::Engine::FixtureValues>> &vals)
         : EffectStatic(vals)
     {
     }
@@ -31,7 +31,7 @@ public:
     EFFECT_CATEGORY(DIMMER);
 
 protected:
-    void recompute(const Engine::TimeContext &t,
+    void recompute(const LightEngine::Engine::TimeContext &t,
                    const DMX::FixtureGroup &g) override;
     // [[nodiscard]] Spec spec() const override;
 };

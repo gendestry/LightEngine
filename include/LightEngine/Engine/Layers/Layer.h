@@ -33,6 +33,7 @@ private:
     Priority m_priority = Priority::NORMAL;
 
 public:
+    Layer() = default;
     Layer(Priority priority = Priority::NORMAL) : m_priority(priority) {}
     virtual ~Layer() = default;
 

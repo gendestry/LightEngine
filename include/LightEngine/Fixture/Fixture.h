@@ -10,6 +10,7 @@
 #include "LightEngine/Fixture/Parameter.h"
 #include "LightEngine/GDTF/LogicalChannel.h"
 #include "Utils/Storage/FragmentedStorage.h"
+#include "Utils/Traits/Stringify.h"
 
 //
 // Fixture: one patched light. It is a Utils::Fragment, so a Universe
@@ -27,7 +28,7 @@
 //
 namespace LightEngine::Fixtures
 {
-class Fixture : public Utils::Fragment
+class Fixture : public Utils::Fragment, public Utils::Traits::Stringify
 {
     std::string m_name = "fixture";
     uint16_t m_fid = 0;
@@ -79,7 +80,7 @@ public:
     // describe() on a shared_ptr<Fixture> (static type), so this resolves
     // by name-hiding - no virtual needed. Prints the real FID, not the
     // per-universe fragment id.
-    [[nodiscard]] std::string describe() const;
+    [[nodiscard]] std::string toString() const override;
 
     const std::string &Name() const { return m_name; }
     uint16_t Fid() const { return m_fid; }

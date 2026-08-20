@@ -346,7 +346,9 @@ int main()
         // const auto vals = h;
         engine.patcher().getFixture(k)->Resolve(v);
     }
-    std::cout << engine.patcher().describe();
+
+    engine.update();
+    std::cout << engine.toString();
     return 0;
     // for()
     // engine.storeGroup();
@@ -407,6 +409,6 @@ int main()
         std::cout << "Universe " << id << ":\n" << uni.dump() << "\n";
     }
 
-    std::cout << engine.describe();
+    std::cout << engine.toString();
     return 0;
 };

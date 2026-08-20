@@ -117,11 +117,6 @@ public:
     // int priority() const override { return 1000; } // programmer wins
     // void apply(Frame &frame, const TimeContext &time) override;
 
-    // std::list<Effects::EffectWrapper> getStaticColors()
-    // {
-    //     return m_staticEffects[Effects::EffectCategory::COLOR];
-    // }
-
     // // A copy of the live selection - Engine wraps this into a Pools::Group
     // on
     // // store. Keeps the programmer free of any pool-object dependency.
