@@ -1,315 +1,411 @@
 @startuml LightEngine
-' LightEngine architecture.
-' Layer 1: a GDTF-faithful Definition that import maps onto 1:1.
-' Layer 2: a runtime layer with a small semantic API (Type/Field) plus cells
-' for individual (per-pixel) control. vdim and HSV live only in the runtime.
-' NOTE: PlantUML only treats ' as a comment at the START of a line.
+' Class diagram of the current (remake2) LightEngine code under include/ + src/.
+' The old/ tree is intentionally excluded.
 
-skinparam packageStyle rectangle
 skinparam classAttributeIconSize 0
-skinparam nodesep 30
-skinparam ranksep 45
+skinparam packageStyle rectangle
 hide empty members
 
-' ============================================================
-' Layer 1 - GDTF-faithful definition (import target, shared)
-' ============================================================
-package "Definition (GDTF FixtureType)" #F4F9FF {
+package "LightEngine::GDTF" {
+    enum Attribute {
+        DIMMER
+        COLOR_R
+        COLOR_G
+        COLOR_B
+        COLOR_W
+        ...
+    }
 
-  class FixtureType {
-    name : string
-    manufacturer : string
-  }
+    struct DMXRange {
+        + min : uint32_t
+        + max : uint32_t
+    }
 
-  enum GdtfAttribute {
-    Dimmer
-    ColorAdd_R
-    ColorAdd_G
-    ColorAdd_B
-    ColorAdd_W
-    Pan
-    Tilt
-    Zoom
-    Shutter1
-  }
+    struct PhysicalRange {
+        + min : float
+        + max : float
+    }
 
-  class Feature {
-    name : string
-  }
+    struct ChannelFunction {
+        + dmx : DMXRange
+        + physical : PhysicalRange
+    }
 
-  class Geometry {
-    name : string
-  }
-  class GeometryReference {
-    name : string
-    position
-    dmxOffset
-  }
+    struct DMXChannel {
+        + enum Resolution
+        + offsets
+    }
 
-  class DMXMode {
-    name : string
-    footprint : uint16
-  }
-  class DMXChannel {
-    offset : bytes
-    geometry : ref
-  }
-  class LogicalChannel {
-    attribute : ref
-    snap
-    master
-  }
-  class ChannelFunction {
-    name : string
-    dmxFrom : uint
-    physicalFrom : float
-    physicalTo : float
-    Evaluate(dmx) : float
-  }
-  class ChannelSet {
-    name : string
-    dmxFrom : uint
-    dmxTo : uint
-  }
+    struct LogicalChannel {
+        + attribute : Attribute
+        + channel : DMXChannel
+        + functions : vector<ChannelFunction>
+    }
 
-  FixtureType *-- GdtfAttribute
-  FixtureType *-- Feature
-  FixtureType *-- Geometry
-  FixtureType *-- DMXMode
-  GdtfAttribute --> Feature
-
-  DMXMode "1" *-- "many" DMXChannel
-  DMXChannel "1" *-- "1..*" LogicalChannel
-  LogicalChannel "1" *-- "1..*" ChannelFunction
-  ChannelFunction "1" *-- "many" ChannelSet
-  LogicalChannel --> GdtfAttribute
-  DMXChannel --> Geometry
-  Geometry "1" o-- "many" GeometryReference
+    LogicalChannel *-- DMXChannel
+    LogicalChannel *-- "0..*" ChannelFunction
+    LogicalChannel --> Attribute
+    ChannelFunction *-- DMXRange
+    ChannelFunction *-- PhysicalRange
 }
 
+package "LightEngine::Fixtures" {
+    class Parameter {
+        - m_def : shared_ptr<const LogicalChannel>
+        + SetDefinition(def)
+        + Definition() : const shared_ptr<const LogicalChannel>&
+    }
+
+    class ColorCell {
+        - m_r/m_g/m_b/m_w : Parameter*
+        - m_dimmer : Parameter*   ' nullptr => virtual dimmer
+        - m_hsv : HSV
+        + SetComponent(attr, p)
+        + SetColor(hsv)
+        + SetHueSat(h, s)
+        + SetIntensity(v)
+        + Resolve()
+    }
+
+    class Fixture {
+        - m_name : string
+        - m_fid : uint16_t
+        - m_buffer : uint8_t*   ' non-owning, into the universe
+        - m_parameters : vector<Parameter>
+        - m_byAttribute : map<Attribute, vector<Parameter*>>
+        - m_colorCells : vector<ColorCell>
+        + Add(def, cellIndex) : Parameter&
+        + Build()
+        + Bind(buffer, start)
+        + Has(attr) : bool
+        + Cell(index) : ColorCell&
+        + Resolve(values : FixtureValues)
+    }
+
+    Fixture *-- "0..*" Parameter
+    Fixture *-- "0..*" ColorCell
+    ColorCell o-- "0..5" Parameter : non-owning >
+    Parameter --> LogicalChannel : shared def >
+}
+
+package "LightEngine::DMX" {
+    class Universe {
+        - m_id : uint16_t
+        - m_byName : map<string, vector<FixturePtr>>
+        + addFixture(fixture[, start]) : FixturePtr
+        + addFixtures(fixture, count, start)
+        + at(index) / byName(name)
+        + buffer() : 512-byte DMX frame
+        - wireBuffers()
+        - reindex()
+    }
+    note right of Universe
+      Owns the fixtures (shared_ptr) and the
+      512-byte DMX buffer they write into.
+    end note
+
+    class FixtureGroup {
+        - m_name : string
+        - m_fixtures : vector<FixturePtr>
+        - m_usedUniverses : set<uint16_t>
+        - m_byAttribute : map<Attribute, vector<Parameter*>>  {cache}
+        - m_colorCells : vector<ColorCell*>  {cache}
+        - m_fids : vector<uint16_t>  {cache}
+        - m_revision : uint64_t
+        + add(fixtures)
+        + fixtures() / fids() / colorCells()
+        + revision() : uint64_t
+        + operator+=()
+        - rebuildCache()
+    }
+    note bottom of FixtureGroup
+      Non-owning named selection.
+      m_revision bumps on every membership
+      change so caches invalidate in O(1).
+    end note
+
+    "Utils::FragmentedStorage<Fixture,512>" <|-- Universe
+    Universe o-- "0..*" Fixture : owns >
+    FixtureGroup o-- "0..*" Fixture : refs >
+}
+
+package "LightEngine::Engine" <<Frame/Layers>> {
+    enum MergePolicy {
+        HTP
+        LTP
+    }
+
+    struct FixtureValues {
+        + color : optional<HSV>
+        + intensity : optional<float>
+        + generic : map<Attribute, float>
+    }
+
+    class Frame {
+        - m_values : map<uint16_t, FixtureValues>
+        + contribute(fid, in, policy)
+        + get(fid) / all()
+        + clear()
+    }
+
+    struct TimeContext {
+        + now : double
+        + dt : float
+    }
+
+    abstract class Layer {
+        + enum Priority {ABOVE_PROG, PROG, HIGH, NORMAL, LOW}
+        - m_priority : Priority
+        + priority() : uint16_t
+        + {abstract} apply(frame, time)
+    }
+
+    Frame *-- "0..*" FixtureValues
+    Frame --> MergePolicy
+    Layer ..> Frame
+    Layer ..> TimeContext
+}
+
+package "LightEngine::Effects" {
+    enum EffectType {
+        STATIC
+        ANIMATED
+    }
+    enum EffectCategory {
+        DIMMER
+        COLOR
+    }
+
+    abstract class EffectBase {
+        - m_cache : vector<pair<fid, FixtureValues>>
+        - m_policy : MergePolicy
+        - m_dirty : bool
+        - m_cachedRevision : uint64_t
+        - m_nextDue / m_phaseOrigin : double
+        + {abstract} recompute(t, group)
+        + due(now, group) : bool
+        + evaluate(t, group)
+        + replay(frame)
+        + markDirty() / syncPhase(now)
+        + {abstract} GetEffectType() / GetEffectCategory()
+    }
+
+    abstract class EffectAnimated {
+        - m_curve : unique_ptr<Curve>
+        - m_bpm / m_spread : float
+        - m_steps : uint16_t
+        + stepInterval() : double
+    }
+
+    abstract class EffectStatic {
+        + setValues(vals)
+    }
+
+    class DimmerChase
+    class StaticColor
+    class StaticIntensity
+
+    struct EffectWrapper {
+        + group : FixtureGroup
+        + effect : shared_ptr<EffectBase>
+    }
+
+    class EffectGroup {
+        - applied : vector<shared_ptr<EffectWrapper>>
+        + push(eff) / pushRet(group, effect)
+        + getEffects() / lastEffect()
+        + operator[](index)
+        + clear()
+    }
+
+    class Engine as "Effects::Engine" {
+        - m_effects : vector<shared_ptr<EffectGroup>>
+    }
+
+    EffectBase <|-- EffectAnimated
+    EffectBase <|-- EffectStatic
+    EffectAnimated <|-- DimmerChase
+    EffectStatic <|-- StaticColor
+    EffectStatic <|-- StaticIntensity
+    EffectBase --> EffectType
+    EffectBase --> EffectCategory
+    EffectBase ..> FixtureGroup : recompute over >
+    EffectBase ..> Frame : replay into >
+
+    EffectWrapper *-- FixtureGroup
+    EffectWrapper o-- EffectBase
+    EffectGroup *-- "0..*" EffectWrapper
+    Layer <|-- EffectGroup
+    "Effects::Engine" *-- "0..*" EffectGroup
+}
+
+package "LightEngine::Engine" <<Pools>> {
+    class PoolObject {
+        - m_number : uint32_t
+        - m_name : string
+        + number() / name() / setName()
+        + describe() : string
+    }
+
+    class "Pool<T>" as PoolT {
+        - m_items : map<uint32_t, shared_ptr<T>>
+        + items()
+        + clear()
+    }
+
+    class "Pools::Group" as PGroup {
+        - m_fg : FixtureGroup
+        + add(fx)
+        + fids() : vector<uint16_t>
+    }
+
+    class "Pools::Color" as PColor {
+        - m_effect : shared_ptr<StaticColor>
+    }
+
+    class Presets {
+        - m_groups : Pool<Pools::Group>
+        - m_colors : Pool<Pools::Color>
+        + groups() / colors()
+        + clear() / describe()
+    }
+
+    PoolObject <|-- PGroup
+    PoolObject <|-- PColor
+    PoolT o-- "0..*" PoolObject
+    Presets *-- "2" PoolT
+    PGroup *-- FixtureGroup
+    PColor o-- StaticColor
+}
+
+package "LightEngine::Engine" <<Core>> {
+    struct Config
+
+    struct Vendor {
+        + fixtures : map<string, Fixture>
+    }
+
+    class FixtureLibrary {
+        - vendor : Vendor
+        + add(...)
+        - addDefaults()
+    }
+
+    class FixtureBuilder {
+        + MakeChannel8Bit(attr, ...) : shared_ptr<const LogicalChannel>
+        + Get() : Fixture
+    }
+
+    class Patch {
+        - m_universes : map<uint16_t, Universe>
+        - m_fixtures : map<uint16_t, FixturePtr>   ' by FID
+        - m_byName : map<string, vector<FixturePtr>>
+        + patch(fixture, universe, amount, ...) : vector<uint16_t>
+        + universes() / fixtures()
+        + getFixtures(fids) : vector<FixturePtr>
+    }
+
+    class GroupSelection {
+        - m_selected : FixtureGroup
+        + select(g) / add(g) / get()
+    }
+
+    class StaticEffectHolder {
+        - values : map<uint16_t, FixtureValues>
+        - byType : map<EffectCategory, set<uint16_t>>
+        - selection : GroupSelection&
+        + get(cat, group)
+        + getValues()
+        + clear()
+    }
+
+    struct All {
+        + values : map<uint16_t, FixtureValues>
+    }
+
+    class Programmer {
+        - m_patch : Patch&
+        - m_runningEffects : EffectGroup
+        - m_selection : GroupSelection
+        - m_staticEffects : StaticEffectHolder
+        + select(g | fids) / add(g | fids)
+        + applyEffect(eff)
+        + setColor(rgb) / setIntensity(v)
+        + selected() : const FixtureGroup&
+        + clearAll()
+        - ensureColor(fid) / singleFixture(fid)
+    }
+
+    class Engine as "Engine::Engine" {
+        - m_config : Config
+        - m_patch : Patch
+        - m_time : TimeContext
+        - m_library : FixtureLibrary
+        - m_output : DMXOutput
+        - m_effectEngine : Effects::Engine
+        - m_frame : Frame
+        - m_programmer : Programmer
+        - m_layers : vector<Layer*>   ' composed low -> high
+        - m_presets : Presets
+        + patch(fixture, universe, amount, ...)
+        + selectGroup(num)
+        + storeGroup([num]) : Pools::Group&
+        + storeColorPreset(num) / recallColorPreset(num)
+        + update(dt)
+    }
+
+    FixtureLibrary *-- Vendor
+    FixtureBuilder ..> Fixture : builds >
+    FixtureLibrary ..> FixtureBuilder
+    Patch *-- "0..*" Universe
+    Programmer --> Patch : uses >
+    Programmer *-- GroupSelection
+    Programmer *-- StaticEffectHolder
+    Programmer *-- EffectGroup : running >
+    StaticEffectHolder --> GroupSelection
+
+    "Engine::Engine" *-- Config
+    "Engine::Engine" *-- Patch
+    "Engine::Engine" *-- TimeContext
+    "Engine::Engine" *-- FixtureLibrary
+    "Engine::Engine" *-- Frame
+    "Engine::Engine" *-- Programmer
+    "Engine::Engine" *-- Presets
+    "Engine::Engine" *-- "Effects::Engine"
+    "Engine::Engine" o-- "0..*" Layer : composes low->high >
+}
+
+package "LightEngine::Output" {
+    class DMXOutput {
+        - m_ip : IP
+        - m_sourceName : string = "Mixer"
+        - m_senders : map<uint16_t, SacnSender>
+        + setIP(ip) / setSourceName(name)
+        + send(universe)
+        + update(dirty, patch)
+        + sendAll(patch)
+        - ensureSender(universe)
+    }
+    note bottom of DMXOutput
+      sACN only for now; a protocol
+      interface can replace SacnSender later.
+    end note
+
+    DMXOutput ..> Universe : sends >
+    DMXOutput ..> Patch
+}
+
+"Engine::Engine" *-- DMXOutput
+
+' ---- per-frame data flow ----
 note as N1
-  GDTF has NO Cell node.
-  A cell/pixel = one GeometryReference:
-  the referenced Geometry's DMXChannels are
-  duplicated at each reference offset. The
-  runtime ColorCell is built by EXPANDING
-  these references.
-  ----
-  demo main.cpp is a flattened form:
-  demo DMXChannel      = GDTF offset + width
-  demo LogicalChannel  = GDTF DMXChannel + LogicalChannel (MERGED)
-  demo ChannelFunction = GDTF ChannelFunction (no ChannelSet yet)
-  demo Cell            = runtime only (from GeometryReference)
+  <b>update(dt) pipeline</b> (non-tracking)
+  1. advance TimeContext
+  2. Frame.clear()
+  3. each Layer (low -> high) apply() -> Frame.contribute(policy)
+     effects: due() ? evaluate() : replay()
+  4. Fixture.Resolve(FixtureValues) -> ColorCell.Resolve() -> DMX bytes
+  5. DMXOutput.update(dirty, patch) -> sACN
 end note
-GeometryReference .. N1
-
-' ============================================================
-' Classification - GDTF attribute to engine capability
-' ============================================================
-package "Classification" #FFF7EE {
-  enum Type {
-    NONE
-    DIMMER
-    COLOR
-    POSITION
-    BEAM
-    VDIMMER
-  }
-  enum Field {
-    R
-    G
-    B
-    W
-    PAN
-    TILT
-    DIMMER
-    ZOOM
-  }
-  class Classifier {
-    classify(GdtfAttribute) : Type_Field
-  }
-  Classifier ..> GdtfAttribute
-  Classifier ..> Type
-  Classifier ..> Field
-}
-
-' ============================================================
-' Runtime - live objects wired to a universe buffer
-' ============================================================
-package "Runtime" #F3FFF3 {
-
-  class Parameter {
-    desc : Descriptor
-    bytes : ptr
-    baseOffset : uint32
-    setChannel(Field, norm)
-    getChannel(Field) : opt
-    has(Field) : bool
-  }
-
-  class VDimmer {
-    color : Parameter
-    level : float
-    bind(Parameter)
-    apply()
-  }
-  VDimmer --|> Parameter
-
-  class ColorCell {
-    name : string
-    vdim : float
-    setColor(HSV)
-    setVDim(float)
-  }
-  ColorCell o-- "1..*" Parameter
-
-  class Fixture {
-    fid : uint16
-    universe : uint16
-    setColor(HSV)
-    setIntensity(float)
-    cell(i) : ColorCell
-    colorCells() : list
-    ensureVirtualDimmer()
-    applyVirtualDimmers()
-  }
-  Fixture "1" *-- "many" Parameter
-  Fixture "1" *-- "many" ColorCell
-  Fixture "1" o-- "0..*" VDimmer
-
-  Parameter ..> Type
-  Parameter ..> Field
-}
-
-' ============================================================
-' DMX plumbing
-' ============================================================
-package "DMX" #FFF3FB {
-  class Universe {
-    id : uint16
-    buffer : bytes512
-    addFixture(def, start) : Fixture
-    blackout()
-    buffer() : bytes
-  }
-  class FixtureGroup {
-    name : string
-    setColor(HSV)
-    setIntensity(float)
-    parameters(Type) : list
-    colorCells() : list
-  }
-  Universe "1" o-- "many" Fixture
-  FixtureGroup o-- "many" Fixture
-  FixtureGroup ..> ColorCell
-}
-
-' ============================================================
-' Engine components
-' ============================================================
-package "Engine" #F7F7FF {
-  class FixtureLibrary {
-    load(gdtf) : Definition
-    get(name) : Definition
-  }
-  class Patch {
-    fixtures : map_FID_Fixture
-    dirty : set
-    patch(name, universe, amount) : fids
-    getFixture(FID) : Fixture
-    blackout()
-  }
-  class Programmer {
-    selection : list
-    values : map
-    select(FixtureGroup)
-    setColor(HSV)
-    setIntensity(float)
-    applyColorGradient(HSV a, HSV b)
-    apply(TimeContext)
-    makeCue(n) : Cue
-  }
-  class Values {
-    color : opt_HSV
-    intensity : opt_float
-  }
-  class Engine {
-    update()
-  }
-
-  FixtureLibrary "1" o-- "many" DMXMode
-  Patch *-- FixtureLibrary
-  Patch *-- "many" Universe
-  Patch o-- "many" Fixture
-  Patch ..> Classifier
-  Programmer o-- "many" Fixture
-  Programmer *-- "many" Values
-  Engine *-- Patch
-  Engine *-- Programmer
-}
-
-' ============================================================
-' Effects + Show
-' ============================================================
-package "Effects_Show" #FFFDF0 {
-  class EffectEngine {
-    update(TimeContext)
-  }
-  class Effect {
-    apply(TimeContext)
-    spec() : Spec
-  }
-  class GradientEffect {
-    a : HSV
-    b : HSV
-    apply(t)
-  }
-  class TimeContext {
-    elapsed : float
-    dt : float
-    phase(hz) : float
-  }
-  class Cue {
-    number : int
-    values : map_FID_Values
-    effects : list
-  }
-  class Sequence {
-    go(patch)
-    apply(TimeContext, patch)
-  }
-
-  GradientEffect --|> Effect
-  EffectEngine o-- "many" Effect
-  Effect o-- FixtureGroup
-  Effect ..> TimeContext
-  Sequence o-- "many" Cue
-  Programmer *-- EffectEngine
-  Engine o-- "many" Sequence
-}
-
-' ============================================================
-' Output
-' ============================================================
-class DMXOutput {
-  sendAll(patch)
-}
-Engine *-- DMXOutput
-DMXOutput ..> Universe
-
-note as N2
-  Engine::update() per frame (non-tracking):
-  blackout -> playback -> programmer
-  -> compose vdim -> send sACN
-end note
-Engine .. N2
-
-note as N3
-  Individual control:
-  a gradient walks the ordered colorCells()
-  list, giving each cell its own point
-  (t = i / (n - 1)). setColor() is broadcast.
-end note
-ColorCell .. N3
 
 @enduml
