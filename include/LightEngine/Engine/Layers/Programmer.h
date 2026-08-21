@@ -32,33 +32,14 @@ namespace LightEngine::Engine
 // edits per fixture; a selection scopes the bulk setters.
 class Programmer : public Utils::Traits::Stringify
 {
-    // The live selection: transient, ordered, cached. NOT a Pools::Group - that
-    // is a stored object; this is "what I'm editing right now". Engine
-    // snapshots it into a Pools::Group on storeGroup().
     Patch &m_patch; // resolves raw FIDs -> live fixtures for selection
     Effects::EffectGroup m_runningEffects;
-    GroupSelection m_selection;
     StaticEffectHolder m_staticEffects;
     Utils::Maths::Interval m_interval;
 
-    // std::map<Effects::EffectCategory, std::list<Effects::EffectWrapper>>
-    //     m_staticEffects;
-    // Effects::EffectHolder running;
-
-    // std::map<uint16_t, FixtureValues> m_edits; // FID -> touched values
-
-    Utils::Colors::HSV &ensureColor(uint16_t fid);
-
-    [[nodiscard]] DMX::FixtureGroup singleFixture(uint16_t fid) const;
-    // void push(std::unique_ptr<Effects::Effect> e)
-    // {
-    //     running.c_ptr->effects.push_back(std::move(e));
-    //     running.c_ptr->dirty = true;
-    // }
-
 public:
     explicit Programmer(Patch &patch)
-        : m_patch(patch), m_staticEffects(m_selection)
+        : m_patch(patch)
     {
     }
     // explicit Programmer(Patch &patch) : Layer(Priority::PROG), m_patch(patch)
@@ -68,47 +49,22 @@ public:
     // select() replaces the current selection, add() accumulates onto it.
     // FixtureGroup overloads take an already-resolved selection; the FID
     // overloads resolve through the patch (skips unpatched FIDs).
-    void select(const DMX::FixtureGroup &g);
     void select(const Utils::Maths::Interval &fids);
     void select(const std::vector<uint16_t> &fids);
-    void add(const DMX::FixtureGroup &g);
     void add(const std::vector<uint16_t> &fids);
     void add(const Utils::Maths::Interval &fids);
 
     void applyEffect(std::shared_ptr<Effects::EffectWrapper> eff);
-    // The live selection is the current stack's selection.
-    // [[nodiscard]] const DMX::FixtureGroup &selection() const
-    // {
-    // return running.c_ptr->selection;
-    // }
 
     // ---- edits (scoped to the current selection) ----
     // void setColor(const Utils::Colors::HSV &hsv); // sets hue/sat only
     void setColor(const Utils::Colors::RGB &rgb); // converts to HSV, hue/sat
-    // void setColorGradient(const Utils::Colors::RGB &rgb,
-    //                       const Utils::Colors::RGB &rgb2);
-    // void setHueSat(float h, float s);
     void setIntensity(float v);
 
     StaticEffectHolder &getStaticEffects() { return m_staticEffects; }
     const Utils::Maths::Interval &selected() const { return m_interval; }
 
-    // void applyHueSat(uint16_t fid, float h, float s);
-    // void applyIntensity(uint16_t fid, float v);
-
-    // A dimmer chase across the current selection. `resolution` is both the
-    // curve's sample count and the effect's step grain: it recomputes that many
-    // times per beat, not once per frame.
-    // void setIntensityRamp(Utils::Maths::Type curve = Utils::Maths::SINUSOID,
-    //                       float bpm = 60.f, float spread = 1.f,
-    //                       uint16_t resolution = 128)
-    // {
-    //     running.push<Effects::DimmerChase>(curve, bpm, spread, resolution);
-    // }
-
-    // ---- clear (staged, console-style) ----
     void clearCurrent() {}
-    // void clearValues() { m_edits.clear(); } // keep selection
     void clearAll()
     {
         m_interval.clear();
@@ -131,15 +87,6 @@ public:
 
         return s.end();
     };
-
-    // int priority() const override { return 1000; } // programmer wins
-    // void apply(Frame &frame, const TimeContext &time) override;
-
-    // // A copy of the live selection - Engine wraps this into a Pools::Group
-    // on
-    // // store. Keeps the programmer free of any pool-object dependency.
-    // [[nodiscard]] DMX::FixtureGroup selectedGroup() const { return
-    // m_selected; }
 };
 
 // class ProgrammerLayer : public Layer

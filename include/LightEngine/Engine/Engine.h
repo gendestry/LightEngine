@@ -42,21 +42,14 @@ class Engine : public Utils::Traits::Stringify
     TimeContext m_time; // advanced each update(); threaded into layers
     FixtureLibrary m_library;
 
-    Output::DMXOutput m_output;   // sACN transmit stage
-    bool m_outputEnabled = false; // set once an IP is configured
+    Output::DMXOutput m_output; // sACN transmit stage
 
-    Effects::Engine m_effectEngine;
     Frame m_frame;                      // per-frame merged values (rebuilt each tick)
     Programmer m_programmer;            // live editing layer
     std::vector<Layer *> m_layers = {}; // composed low -> high
 
     Presets m_presets; // all object pools (groups, presets, cues...) live here
     Utils::Logger logger;
-
-    // Command subsystem (text -> AST -> actions). Held by pointer so the
-    // parser/executor headers stay out of the public API.
-    // std::unique_ptr<Commands::CommandParser> m_parser;
-    // std::unique_ptr<Commands::CommandExecutor> m_exec;
 
 public:
     Engine();
@@ -67,25 +60,6 @@ public:
           std::optional<uint32_t> start = std::nullopt,
           std::optional<uint16_t> startFID = std::nullopt);
 
-    // // ---- stored pools ----
-    // [[nodiscard]] Stored &stored() { return m_stored; }
-    // [[nodiscard]] const Stored &stored() const { return m_stored; }
-
-    // // ---- text commands ----
-    // // Load the grammar + token definitions (enables command()).
-    // void loadCommands(const std::string &tokensFile,
-    //                   const std::string &grammarFile);
-    // // Parse and execute one command line. Returns false on a parse error
-    // (or
-    // // if loadCommands() hasn't been called).
-    // bool command(const std::string &line);
-
-    // // ---- programmer ----
-    // // Console-style Clear: wipe the programmer's values and selection so
-    // it
-    // // stops contributing to the frame.
-    // void clear();
-
     // // Select a stored group into the programmer (replace).
     void selectGroup(uint32_t num);
     void appendGroup(uint32_t num);
@@ -93,57 +67,11 @@ public:
     Pools::Group &storeGroup(uint32_t num);
     Pools::Group &storeGroup();
 
-    // ---- color presets ----
-    // Capture the current programmer color (h,s) per selected fixture; recall
-    // applies it back onto the current selection (stored fixtures only).
     Pools::Color &storeColorPreset(uint32_t num);
     Pools::Color &storeColorPreset();
     void recallColorPreset(uint32_t num);
 
-    // // ---- dimmer presets ----
-    // // Capture the current programmer intensity (HSV.v) per selected
-    // fixture. Pools::DimmerPreset &storeDimmerPreset(uint32_t num); void
-    // recallDimmerPreset(uint32_t num);
-
-    // ---- render ----
-    // Non-tracking frame: wipe every universe, then push each fixture's state
-    // back into its buffer via Resolve() (color cells + generic attributes).
-    // dt is the wall-clock delta since the last frame (seconds); the caller
-    // owns the clock so the render path stays deterministic and testable.
     void update(float dt = 0.f);
-
-    // // ---- output (sACN) ----
-    // // Configuring a source IP enables the transmit stage; until then
-    // update()
-    // // renders but sends nothing (so headless/print-only runs stay offline).
-    // // void setIP(const std::string &ip); void setIP(const
-    // Utils::Network::IP &ip); void setSourceName(const std::string &name);
-    // [[nodiscard]] DMXOutput &output() { return m_output; }
-
-    // // ---- composed output (read-only, for UIs) ----
-    // // The merged per-frame values after all layers compose - i.e. what
-    // is
-    // // actually on stage. Valid after update(). Prefer this over
-    // programmer
-    // // edits() for display, since it reflects every layer, not just the
-    // user's.
-    // [[nodiscard]] const Frame &frame() const { return m_frame; }
-    // [[nodiscard]] const FixtureValues *values(uint16_t fid) const
-    // {
-    //     return m_frame.get(fid);
-    // }
-
-    // // ---- resolved DMX read-back (the values actually being sent) ----
-    // // These read straight from the universe buffers, selecting channels
-    // by attribute (not raw offset) so they work for any fixture layout.
-    // Valid after update(). Return 0 / black if the fixture/attribute/cell is
-    // absent.
-    // // attributeValue(): one attribute of one color cell, as its DMX code
-    // // (0..255 for 8-bit, 0..65535 for 16-bit).
-    // [[nodiscard]] uint16_t attributeValue(uint16_t fid, GDTF::Attribute attr,
-    // uint16_t cell = 0);
-    // // color(): the resolved {R,G,B} of one color cell.
-    // [[nodiscard]] Utils::Colors::RGB color(uint16_t fid, uint16_t cell = 0);
 
     // // ---- layers ----
     [[nodiscard]] Programmer &programmer() { return m_programmer; }

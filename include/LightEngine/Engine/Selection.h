@@ -8,51 +8,11 @@
 namespace LightEngine::Engine
 {
 
-struct All
-{
-    std::map<uint16_t, FixtureValues> values;
-    // std::vector<Effects::EffectGroup> groups;
-    // std::unordered_map<Effects::EffectCategory, typename Tp>
-};
-
-class GroupSelection
-{
-    DMX::FixtureGroup m_selected;
-
-public:
-    void select(const DMX::FixtureGroup &g) { m_selected = g; }
-
-    // void select(const std::vector<uint16_t> &fids)
-    // {
-    //     DMX::FixtureGroup g(m_patch.getFixtures(fids));
-    //     m_selected = std::move(g);
-    // }
-
-    void add(const DMX::FixtureGroup &g) { m_selected += g; }
-
-    [[nodiscard]] const DMX::FixtureGroup &get() const { return m_selected; }
-
-    // void clearSelection()
-
-    // void add(const std::vector<uint16_t> &fids)
-    // {
-    //     m_selected += m_patch.getFixtures(fids);
-    // }
-    //     };
-};
-
 class StaticEffectHolder
 {
-    // GroupSelection& selection;
-    // std::vector<std::shared_ptr<Effects::EffectWrapper>> groups;
-    // std::list<std::shared_ptr<Effects::EffectWrapper>> staticColors;
-    // std::list<std::shared_ptr<Effects::EffectWrapper>> staticIntensity;
-    // std::unordered_map<Effects::EffectCategory, std::set<uint16_t>> byType;
     std::map<uint16_t, FixtureValues> values;
     Utils::Maths::Interval onGroups;
     std::unordered_map<Effects::EffectCategory, std::set<uint16_t>> byType;
-
-    GroupSelection &selection;
 
     std::vector<std::pair<uint16_t, FixtureValues>>
     get(Effects::EffectCategory cat, const DMX::FixtureGroup &group)
@@ -120,7 +80,7 @@ class StaticEffectHolder
     }
 
 public:
-    StaticEffectHolder(GroupSelection &gselection) : selection(gselection) {}
+    StaticEffectHolder() = default;
     // void setIntensity(const DMX::FixtureGroup &group, float i)
     // {
     //     for (auto g : group.fids())
