@@ -21,10 +21,8 @@ class FixtureLibrary
         parameters.emplace_back(FixtureBuilder::MakeChannel8Bit(GDTF::Attribute::COLOR_G, 1), 0);
         parameters.emplace_back(FixtureBuilder::MakeChannel8Bit(GDTF::Attribute::COLOR_B, 2), 0);
         fixTemp->parameters = std::move(parameters);
-        Fixtures::Fixture fix(fixTemp);
-        fix.Build();
 
-        vendor.fixtures["RGB"] = std::move(fix);
+        vendor.fixtures["RGB"] = std::move(Fixtures::Fixture(fixTemp));
 
         // add({"RGB",
         //      {GDTF::Attribute::COLOR_R, GDTF::Attribute::COLOR_G,

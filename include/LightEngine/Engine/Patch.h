@@ -11,6 +11,7 @@
 
 #include "LightEngine/DMX/Universe.h"
 #include "LightEngine/Fixture/Fixture.h"
+#include "LightEngine/Fixture/FixtureTemplate.h"
 #include "Utils/Logging/Logger.h"
 // #include "LightEngine/Engine/FixtureLibrary.h"   // TODO: library + loadGDTF
 
@@ -48,6 +49,11 @@ public:
     patch(const LightEngine::Fixtures::Fixture &fixture, uint16_t universe,
           uint16_t amount, std::optional<uint32_t> start = std::nullopt,
           std::optional<uint16_t> startFID = std::nullopt);
+
+    std::vector<uint16_t>
+    patchTemplate(const LightEngine::Fixtures::FixtureTemplate &fixtureTemp, uint16_t universe,
+                  uint16_t amount, std::optional<uint32_t> start = std::nullopt,
+                  std::optional<uint16_t> startFID = std::nullopt);
 
     // ---- lookup ----
     [[nodiscard]] LightEngine::DMX::Universe *getUniverse(uint16_t universe);

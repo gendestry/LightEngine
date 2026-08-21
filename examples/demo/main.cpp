@@ -341,8 +341,8 @@ int main()
     prog.select(fids8);
     prog.add(fids9);
     prog.add(fids10);
-    prog.setColor({255, 255, 255});
-    prog.setIntensity(0.f);
+    prog.setColor({255, 128, 0});
+    prog.setIntensity(0.3f);
 
     auto &h = prog.getStaticEffects().getValues();
     for (auto &[k, v] : h)
