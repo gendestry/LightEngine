@@ -90,58 +90,12 @@ Patch::patch(const LightEngine::Fixtures::Fixture &fixture, uint16_t universe,
     return fids;
 }
 
-std::vector<uint16_t> Patch::patchTemplate(const LightEngine::Fixtures::FixtureTemplate &fixtureTemp, uint16_t universe,
+std::vector<uint16_t> Patch::patchTemplate(std::shared_ptr<Fixtures::FixtureTemplate> fixtureTemp, uint16_t universe,
                                            uint16_t amount, std::optional<uint32_t> start,
                                            std::optional<uint16_t> startFID)
 {
-    // if (amount == 0)
-    // {
-    //     logger.error("Trying to patch 0 fixtures");
-    //     return {};
-    // }
-
-    // logger.debug("Patching {} fixtures at uni: {} addr: {}", amount, universe,
-    //              start ? std::to_string(*start) : "auto");
-
-    // LightEngine::DMX::Universe &uni = ensureUniverse(universe);
-
-    // std::vector<FixturePtr> placed;
-    // if (start.has_value())
-    // {
-    //     placed = uni.addFixtures(fixture, amount, *start);
-    // }
-    // else
-    // {
-    //     placed.reserve(amount);
-    //     for (uint16_t i = 0; i < amount; ++i)
-    //     {
-    //         placed.push_back(uni.addFixture(fixture));
-    //     }
-    // }
-
-    // std::vector<uint16_t> fids;
-    // fids.reserve(placed.size());
-    // uint16_t fid = startFID.value_or(nextFreeFid());
-    // for (const auto &f : placed)
-    // {
-    //     if (f == nullptr)
-    //     {
-    //         continue; // placement failed (overlap / full)
-    //     }
-    //     while (m_usedFids.contains(fid))
-    //     {
-    //         ++fid;
-    //     }
-    //     registerFixture(fid, f);
-    //     fids.push_back(fid);
-    //     ++fid;
-    // }
-
-    // if (!fids.empty())
-    // {
-    //     markDirty(universe);
-    // }
-    // return fids;
+    Fixtures::Fixture fix(fixtureTemp);
+    return patch(fix, universe, amount, start, startFID);
 }
 
 LightEngine::DMX::Universe *Patch::getUniverse(uint16_t universe)

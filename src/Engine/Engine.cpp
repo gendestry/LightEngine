@@ -44,6 +44,14 @@ std::vector<uint16_t> Engine::patch(const Fixtures::Fixture &fixture,
     return m_patch.patch(fixture, universe, amount, start, startFID);
 }
 
+std::vector<uint16_t>
+Engine::patchTemplate(std::shared_ptr<Fixtures::FixtureTemplate> fixtureTemp, uint16_t universe,
+                      uint16_t amount, std::optional<uint32_t> start,
+                      std::optional<uint16_t> startFID)
+{
+    return m_patch.patchTemplate(fixtureTemp, universe, amount, start, startFID);
+}
+
 // ---- programmer ----
 // void Engine::clear() { m_programmer.clearAll(); }
 

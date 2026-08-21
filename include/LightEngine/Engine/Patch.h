@@ -51,7 +51,7 @@ public:
           std::optional<uint16_t> startFID = std::nullopt);
 
     std::vector<uint16_t>
-    patchTemplate(const LightEngine::Fixtures::FixtureTemplate &fixtureTemp, uint16_t universe,
+    patchTemplate(std::shared_ptr<Fixtures::FixtureTemplate> fixtureTemp, uint16_t universe,
                   uint16_t amount, std::optional<uint32_t> start = std::nullopt,
                   std::optional<uint16_t> startFID = std::nullopt);
 

@@ -328,12 +328,12 @@ int main()
     Engine::Engine engine;
 
     auto &lib = engine.fixtureLibrary();
-    auto rgb = lib.find("RGB").value();
+    auto rgb = lib.findTemplate("RGB").value();
 
     // RGB fixtures (3 channels each) across three universes.
-    auto fids8 = engine.patch(rgb, 8, 93);
-    auto fids9 = engine.patch(rgb, 9, 120);
-    auto fids10 = engine.patch(rgb, 10, 60);
+    auto fids8 = engine.patchTemplate(rgb, 8, 93);
+    auto fids9 = engine.patchTemplate(rgb, 9, 120);
+    auto fids10 = engine.patchTemplate(rgb, 10, 60);
     // auto fids9 = engine.patch(rgb, 9, 10);
     // auto fids10 = engine.patch(rgb, 10, 11);
 
