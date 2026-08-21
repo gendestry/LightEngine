@@ -12,6 +12,7 @@ Engine::Engine() : m_programmer(m_patch), logger("Engine")
 {
     m_output.setIP(m_config.ip);
     m_output.setSourceName(m_config.name);
+    logger.setLoggerLevel(Utils::Logger::DEBUGGING);
 } // m_patch declared first -> safe
 Engine::~Engine() = default; // here the command types are complete
 
@@ -60,22 +61,35 @@ void Engine::selectGroup(uint32_t num)
     if (auto grp = m_presets.groups().get(num))
     {
         m_programmer.select(grp->fixtureGroup());
-        logger.debug("Selected Group {}", num);
+        logger.debug("Selected Group {} {}", num, grp->fixtureGroup().toString());
     }
     else
     {
-        logger.error("Group {} does not exist", num);
+        logger.warn("Group {} does not exist", num);
+    }
+}
+
+void Engine::appendGroup(uint32_t num)
+{
+    if (auto grp = m_presets.groups().get(num))
+    {
+        m_programmer.add(grp->fixtureGroup());
+        logger.debug("Appended Group {} {}", num, m_programmer.selected().toString());
+    }
+    else
+    {
+        logger.warn("Group {} does not exist", num);
     }
 }
 
 Pools::Group &Engine::storeGroup(uint32_t num)
 {
-    return m_presets.groups().emplaceAt(num, m_programmer.selected().fixtures());
+    return m_presets.groups().emplaceAt(num, m_programmer.selected());
 }
 
 Pools::Group &Engine::storeGroup()
 {
-    return m_presets.groups().emplace(m_programmer.selected().fixtures());
+    return m_presets.groups().emplace(m_programmer.selected());
 }
 
 // // ---- color presets ----
@@ -90,17 +104,24 @@ Pools::Color &Engine::storeColorPreset(uint32_t num)
             m_programmer.getStaticEffects().getColor(m_programmer.selected())));
 }
 
-// void Engine::recallColorPreset(uint32_t num)
-// {
-//     if (auto preset = m_presets.colors().get(num))
-//     {
-//         for (auto it : preset->get())
-//         {
-//             m_programmer.applyEffect(it);
-//         }
-//     }
-//     // preset->recall(m_programmer, m_programmer.selection());
-// }
+Pools::Color &Engine::storeColorPreset()
+{
+    return m_presets.colors().emplace(
+        std::make_shared<Effects::StaticColor>(
+            m_programmer.getStaticEffects().getColor(m_programmer.selected())));
+}
+
+void Engine::recallColorPreset(uint32_t num)
+{
+    if (auto preset = m_presets.colors().get(num))
+    {
+        //         for (auto it : preset->get())
+        //         {
+        //             m_programmer.applyEffect(it);
+        //         }
+    }
+    //     // preset->recall(m_programmer, m_programmer.selection());
+}
 
 // // ---- dimmer presets ----
 // Pools::DimmerPreset &Engine::storeDimmerPreset(uint32_t num)

@@ -5,34 +5,50 @@
 namespace LightEngine::Engine::Pools
 {
 
-class Group : public Engine::PoolObject
+class Group : public PoolObject
 {
-    DMX::FixtureGroup
-        m_fg; // the working selection — already does the hard part
+    // DMX::FixtureGroup
+    //     m_fg; // the working selection — already does the hard part
+    Utils::Maths::Interval m_group;
+
 public:
     Group() = default;
-    Group(DMX::FixtureGroup &group) : m_fg(std::move(group)) {};
-    explicit Group(std::vector<std::shared_ptr<Fixtures::Fixture>> fixtures)
-    {
-        m_fg.add(fixtures);
-    }
+    Group(const Utils::Maths::Interval &group) : m_group(std::move(group)) {};
+    // explicit Group(std::vector<std::shared_ptr<Fixtures::Fixture>> fixtures)
+    // {
+    //     m_fg.add(fixtures);
+    // }
 
     // direct access — no resolve, it's always live
-    DMX::FixtureGroup &fixtureGroup() { return m_fg; }
-    const DMX::FixtureGroup &fixtureGroup() const { return m_fg; }
+    // DMX::FixtureGroup &fixtureGroup() { return m_fg; }
+    // const DMX::FixtureGroup &fixtureGroup() const { return m_fg; }
 
-    void add(const std::vector<std::shared_ptr<Fixtures::Fixture>> &fx)
-    {
-        m_fg.add(fx);
-    }
+    Utils::Maths::Interval &fixtureGroup() { return m_group; }
+    const Utils::Maths::Interval &fixtureGroup() const { return m_group; }
+
+    // void add(const std::vector<std::shared_ptr<Fixtures::Fixture>> &fx)
+    // {
+    //     m_fg.add(fx);
+    // }
 
     // snapshot of FIDs — only needed for serialization
-    std::vector<uint16_t> fids() const { return m_fg.fids(); }
-
-    std::string describe() const override
+    std::vector<uint16_t> fids() const
     {
-        return "Group " + std::to_string(number()) + " \"" + name() + "\" " +
-               m_fg.describe();
+        const auto &values = m_group.values();
+        std::vector<uint16_t> ret;
+        ret.reserve(values.size());
+        for (const auto v : values)
+            ret.push_back(static_cast<uint16_t>(v));
+        return ret;
+    }
+
+    [[nodiscard]] std::string toString() const override
+    {
+        const auto nameExpr =
+            name().empty() ? Theme::dim("Unnamed") : Theme::txt("{}");
+
+        return Utils::Font::format(Utils::Font::group(Theme::lbl("Group "), "[", Theme::num("{}"), "]: ", nameExpr, "fixs: {}"),
+                                   number(), name(), m_group.toString());
     }
 };
 } // namespace LightEngine::Engine::Pools

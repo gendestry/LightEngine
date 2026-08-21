@@ -32,7 +32,7 @@ public:
 
 protected:
     void recompute(const LightEngine::Engine::TimeContext &t,
-                   const DMX::FixtureGroup &g) override;
+                   const Utils::Maths::Interval &g) override;
     // [[nodiscard]] Spec spec() const override;
 };
 } // namespace LightEngine::Effects

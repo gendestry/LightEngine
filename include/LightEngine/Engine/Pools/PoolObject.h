@@ -2,19 +2,21 @@
 #include <cstdint>
 #include <string>
 
-#include "Utils/Colors/Font.h"
+#include "Utils/Colors/ColorFormatter.h"
+#include "Utils/Colors/Theme.h"
 
 namespace LightEngine::Engine
 {
 
-class PoolObject
+class PoolObject : public Utils::Traits::Stringify
 {
     uint32_t m_number = 0;
     std::string m_name;
 
 protected:
     void setNumber(uint32_t n) { m_number = n; }
-    template <class> friend class Pool;
+    template <class>
+    friend class Pool;
 
 public:
     virtual ~PoolObject() = default;
@@ -24,13 +26,18 @@ public:
 
     // One-line identity: "#3 Front wash" (number dim, name bold). Subclasses
     // override to append their payload, and usually prefix this base version.
-    virtual std::string describe() const
-    {
-        return Utils::Font::colorDim + "#" + std::to_string(m_number) + " " +
-               Utils::Font::reset + Utils::Font::bold +
-               (m_name.empty() ? Utils::Font::colorDim + "(unnamed)" : m_name) +
-               Utils::Font::reset;
-    }
+    [[nodiscard]] virtual std::string toString() const = 0;
+    // {
+    //     // m_name is user data and may contain braces, so it goes in as a "{}"
+    //     // argument rather than being baked into the format string.
+    //     const auto nameExpr =
+    //         m_name.empty() ? Theme::dim("Unnamed") : Theme::txt("{}");
+
+    //     // Uncoloured outer scope: every child restores to plain text, so the
+    //     // brackets and separators stay default-coloured.
+    //     return Utils::Font::format(Utils::Font::group(Theme::lbl("Preset "), "[", Theme::num("{}"), "]: ", nameExpr),
+    //                                m_number, m_name);
+    // }
 };
 
 } // namespace LightEngine::Engine

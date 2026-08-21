@@ -25,6 +25,6 @@ public:
 
 protected:
     void recompute(const Engine::TimeContext &t,
-                   const DMX::FixtureGroup &g) override;
+                   const Utils::Maths::Interval &g) override;
 };
 } // namespace LightEngine::Effects

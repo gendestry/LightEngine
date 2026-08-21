@@ -30,57 +30,44 @@ Utils::Colors::RGB hueSatToRgb(float h, float s)
 //                                                 hueSatToRgb(hsv.h, hsv.s)));
 // }
 
-void Programmer::select(const DMX::FixtureGroup &g) { m_selection.select(g); }
+// void Programmer::select(const DMX::FixtureGroup &g) { m_selection.select(g); }
+
+void Programmer::select(const Utils::Maths::Interval &fids)
+{
+    // m_interval.clear();
+    m_interval = fids;
+}
 
 void Programmer::select(const std::vector<uint16_t> &fids)
 {
-    DMX::FixtureGroup g(m_patch.getFixtures(fids));
-    m_selection.select(std::move(g));
+    m_interval.clear();
+    m_interval.add(fids);
 }
 
-void Programmer::add(const DMX::FixtureGroup &g) { m_selection.add(g); }
+// void Programmer::add(const DMX::FixtureGroup &g) { m_selection.add(g); }
 
 void Programmer::add(const std::vector<uint16_t> &fids)
 {
-    m_selection.add(m_patch.getFixtures(fids));
+    m_interval.add(fids);
 }
 
-// void Programmer::applyEffect(std::shared_ptr<Effects::EffectWrapper> eff)
-// {
-//     auto g = eff->group & m_selected;
-//     m_runningEffects.push(eff);
-// }
+void Programmer::add(const Utils::Maths::Interval &fids)
+{
+    m_interval |= fids;
+}
 
 void Programmer::setColor(const Utils::Colors::RGB &rgb)
 {
-    auto &group = m_selection.get();
-    m_staticEffects.setColor(group, rgb);
+    m_staticEffects.setColor(m_interval, rgb);
     m_runningEffects.pushRet<Effects::StaticColor>(
-        group, m_staticEffects.getColor(group));
+        m_interval, m_staticEffects.getColor(m_interval));
 }
-
-// void Programmer::setColorGradient(const Utils::Colors::RGB &rgb,
-//                                   const Utils::Colors::RGB &rgb2)
-// {
-//     running.push<Effects::StaticColorGrad>(rgb, rgb2);
-// }
-
-// void Programmer::setHueSat(float h, float s)
-// {
-//     push(
-//         std::make_unique<Effects::ColorEffect>(m_selection, hueSatToRgb(h,
-//         s)));
-// }
 
 void Programmer::setIntensity(float v)
 {
-    auto &group = m_selection.get();
-    m_staticEffects.setIntensity(group, v);
+    m_staticEffects.setIntensity(m_interval, v);
     m_runningEffects.pushRet<Effects::StaticIntensity>(
-        group, m_staticEffects.getIntensity(group));
-    // m_staticEffects[Effects::StaticIntensity::GetStaticCategory()].push_back(
-    //     m_runningEffects.pushRet<Effects::StaticIntensity>(m_selected, v));
-    // running.push<Effects::StaticIntensity>(v);
+        m_interval, m_staticEffects.getIntensity(m_interval));
 }
 
 // void Programmer::setIntensityRamp(float a, float b)

@@ -139,10 +139,10 @@ void FixtureGroup::clear()
     ++m_revision;
 }
 
-const std::vector<FixtureGroup::FixturePtr> &FixtureGroup::fixtures() const
-{
-    return m_fixtures;
-}
+// const std::vector<FixtureGroup::FixturePtr> &FixtureGroup::fixtures() const
+// {
+//     return m_fixtures;
+// }
 
 const std::vector<uint16_t> &FixtureGroup::fids() const
 {

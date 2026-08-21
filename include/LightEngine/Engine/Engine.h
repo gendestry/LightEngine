@@ -88,6 +88,7 @@ public:
 
     // // Select a stored group into the programmer (replace).
     void selectGroup(uint32_t num);
+    void appendGroup(uint32_t num);
     // // Snapshot the current selection into the group pool at `num` / next
     Pools::Group &storeGroup(uint32_t num);
     Pools::Group &storeGroup();
@@ -96,6 +97,7 @@ public:
     // Capture the current programmer color (h,s) per selected fixture; recall
     // applies it back onto the current selection (stored fixtures only).
     Pools::Color &storeColorPreset(uint32_t num);
+    Pools::Color &storeColorPreset();
     void recallColorPreset(uint32_t num);
 
     // // ---- dimmer presets ----
@@ -149,6 +151,7 @@ public:
 
     [[nodiscard]] const TimeContext &time() const { return m_time; }
     [[nodiscard]] const Patch &patcher() const { return m_patch; }
+    [[nodiscard]] const Presets &presets() const { return m_presets; }
     [[nodiscard]] FixtureLibrary &fixtureLibrary()
     {
         return m_library;

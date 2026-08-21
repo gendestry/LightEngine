@@ -42,7 +42,7 @@ public:
 
 protected:
     void recompute(const LightEngine::Engine::TimeContext &t,
-                   const DMX::FixtureGroup &group) override;
+                   const Utils::Maths::Interval &group) override;
 
 public:
     EFFECT_CATEGORY(COLOR);

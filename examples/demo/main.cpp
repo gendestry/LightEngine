@@ -342,9 +342,46 @@ int main()
     prog.select(fids8);
     prog.add(fids9);
     prog.add(fids10);
+    engine.storeGroup();
+    prog.select(fids8);
+    engine.storeGroup();
+    prog.select(fids9);
+    engine.storeGroup();
+    prog.select(fids10);
+    engine.storeGroup();
+    // prog.select(fids8);
+    // engine.selectGroup(2);
+    // prog.setColor({255, 128, 0});
+    engine.selectGroup(2);
+    // prog.select(fids9);
+    prog.setColor({0, 0, 255});
+    engine.selectGroup(3);
+    prog.setColor({255, 0, 0});
+    engine.appendGroup(4);
+    prog.setIntensity(1.f);
+    engine.selectGroup(2);
+    engine.appendGroup(3);
+    engine.storeColorPreset(1);
+
+    // prog.add(fids8);
+    // engine.storeColorPreset();
+    prog.clearAll();
+    engine.selectGroup(1);
+    engine.recallColorPreset(1);
+    prog.setIntensity(1.f);
+    // auto colors = prog.getStaticEffects().getColor(prog.selected());
+    // for (auto &[k, v] : colors)
+    // {
+    //     std::cout << std::format("{}, {}\n", k, v.color->toString());
+    // }
+    // engine.recallColorPreset(1);
+    // prog.setIntensity(0.7f);
+    // std::cout << prog.toString();
+
+    std::cout << engine.presets().toString() << std::endl;
+
     // prog.select(fids);
-    prog.setColor({255, 128, 0});
-    prog.setIntensity(0.3f);
+    // prog.setColor({255, 128, 0});
 
     auto &h = prog.getStaticEffects().getValues();
     for (auto &[k, v] : h)

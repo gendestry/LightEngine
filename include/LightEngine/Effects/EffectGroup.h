@@ -9,7 +9,7 @@ namespace LightEngine::Effects
 {
 struct EffectWrapper
 {
-    DMX::FixtureGroup group;
+    Utils::Maths::Interval group;
     std::shared_ptr<Effects::EffectBase> effect;
 };
 class EffectGroup : public LightEngine::Engine::Layer
@@ -25,7 +25,7 @@ public:
     }
 
     template <typename T, typename... Args>
-    void push(DMX::FixtureGroup group, Args &&...args)
+    void push(Utils::Maths::Interval group, Args &&...args)
     {
         EffectWrapper wrap;
         wrap.group = std::move(group);
@@ -34,7 +34,7 @@ public:
     }
 
     template <typename T, typename... Args>
-    std::shared_ptr<EffectWrapper> pushRet(DMX::FixtureGroup group,
+    std::shared_ptr<EffectWrapper> pushRet(Utils::Maths::Interval group,
                                            Args &&...args)
     {
         EffectWrapper wrap;

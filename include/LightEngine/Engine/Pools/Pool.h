@@ -11,7 +11,8 @@
 namespace LightEngine::Engine
 {
 
-template <class T> class Pool
+template <class T>
+class Pool : public Utils::Traits::Stringify
 {
     using Ptr = std::shared_ptr<T>;
     std::map<uint32_t, Ptr> m_items;
@@ -62,11 +63,13 @@ public:
     // Construct a T in place at an explicit slot / the next free slot.
     // Note: emplaceAt vs emplace are deliberately distinct names - a single
     // overload set can't disambiguate `emplace(5)` (slot 5? or ctor arg 5?).
-    template <class... Args> T &emplaceAt(uint32_t num, Args &&...args)
+    template <class... Args>
+    T &emplaceAt(uint32_t num, Args &&...args)
     {
         return store(num, std::make_shared<T>(std::forward<Args>(args)...));
     }
-    template <class... Args> T &emplace(Args &&...args)
+    template <class... Args>
+    T &emplace(Args &&...args)
     {
         return store(nextFree(),
                      std::make_shared<T>(std::forward<Args>(args)...));
@@ -161,7 +164,7 @@ public:
 
     // Multi-line dump: a header with the count, then each item's own describe()
     // indented, in ascending number order.
-    [[nodiscard]] std::string describe() const
+    [[nodiscard]] std::string toString() const override
     {
         std::string s = Utils::Font::bold + "Pool" + Utils::Font::reset +
                         Utils::Font::colorDim + " [" +
@@ -169,7 +172,7 @@ public:
                         Utils::Font::reset;
         for (const auto &[num, obj] : m_items)
         {
-            s += "\n  " + obj->describe();
+            s += "\n  " + obj->toString();
         }
         return s;
     }

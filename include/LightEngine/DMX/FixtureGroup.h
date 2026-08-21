@@ -74,7 +74,7 @@ public:
     [[nodiscard]] const std::string &name() const { return m_name; }
     void setName(std::string name) { m_name = std::move(name); }
 
-    [[nodiscard]] const std::vector<FixturePtr> &fixtures() const;
+    // [[nodiscard]] const std::vector<FixturePtr> &fixtures() const;
 
     // The member FIDs in selection order (cached - effects walk this every
     // frame, so it must not allocate). Valid until the next membership change.

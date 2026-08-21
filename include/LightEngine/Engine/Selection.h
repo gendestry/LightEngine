@@ -49,6 +49,7 @@ class StaticEffectHolder
     // std::list<std::shared_ptr<Effects::EffectWrapper>> staticIntensity;
     // std::unordered_map<Effects::EffectCategory, std::set<uint16_t>> byType;
     std::map<uint16_t, FixtureValues> values;
+    Utils::Maths::Interval onGroups;
     std::unordered_map<Effects::EffectCategory, std::set<uint16_t>> byType;
 
     GroupSelection &selection;
@@ -84,23 +85,81 @@ class StaticEffectHolder
         return result;
     }
 
+    std::vector<std::pair<uint16_t, FixtureValues>>
+    get(Effects::EffectCategory cat, const Utils::Maths::Interval &selected)
+    {
+        std::vector<std::pair<uint16_t, FixtureValues>> result;
+        result.reserve(byType[cat].size());
+
+        FixtureValues v;
+        Utils::Colors::HSV hsvCol;
+
+        auto intersection = onGroups & selected;
+
+        for (const auto id : intersection.values())
+        {
+            auto &it = values[id];
+            // if (const auto it = values.find(id); it != values.end())
+            // {
+            switch (cat)
+            {
+            case Effects::EffectCategory::COLOR:
+                hsvCol.h = it.color->h;
+                hsvCol.s = it.color->s;
+                v.color = hsvCol;
+                break;
+            case Effects::EffectCategory::DIMMER:
+                v.intensity = it.intensity;
+                break;
+            }
+            result.push_back({id, std::move(v)});
+            // }
+        }
+
+        return result;
+    }
+
 public:
     StaticEffectHolder(GroupSelection &gselection) : selection(gselection) {}
-    void setIntensity(const DMX::FixtureGroup &group, float i)
+    // void setIntensity(const DMX::FixtureGroup &group, float i)
+    // {
+    //     for (auto g : group.fids())
+    //     {
+    //         values[g].intensity = i;
+    //         byType[Effects::EffectCategory::DIMMER].emplace(g);
+    //     }
+    // }
+
+    void setIntensity(const Utils::Maths::Interval &group, float i)
     {
-        for (auto g : group.fids())
+        onGroups |= group;
+        for (auto g : group.values())
         {
             values[g].intensity = i;
             byType[Effects::EffectCategory::DIMMER].emplace(g);
         }
     }
 
-    void setColor(const DMX::FixtureGroup &group,
+    // void setColor(const DMX::FixtureGroup &group,
+    //               const Utils::Colors::RGB &color)
+    // {
+    //     auto hsv = color.toHSV();
+
+    //     for (auto &g : group.fids())
+    //     {
+    //         values[g].color = hsv;
+    //         byType[Effects::EffectCategory::COLOR].emplace(g);
+    //     }
+    // }
+
+    void setColor(const Utils::Maths::Interval &group,
                   const Utils::Colors::RGB &color)
     {
+        onGroups |= group;
+
         auto hsv = color.toHSV();
 
-        for (auto &g : group.fids())
+        for (auto &g : group.values())
         {
             values[g].color = hsv;
             byType[Effects::EffectCategory::COLOR].emplace(g);
@@ -119,6 +178,18 @@ public:
         return get(Effects::EffectCategory::COLOR, group);
     }
 
+    std::vector<std::pair<uint16_t, FixtureValues>>
+    getIntensity(const Utils::Maths::Interval &group)
+    {
+        return get(Effects::EffectCategory::DIMMER, group);
+    }
+
+    std::vector<std::pair<uint16_t, FixtureValues>>
+    getColor(const Utils::Maths::Interval &group)
+    {
+        return get(Effects::EffectCategory::COLOR, group);
+    }
+
     const std::map<uint16_t, FixtureValues> &getValues() const
     {
         return values;
@@ -126,6 +197,7 @@ public:
 
     void clear()
     {
+        onGroups.clear();
         values.clear();
         byType.clear();
     }

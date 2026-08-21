@@ -17,7 +17,7 @@
 //
 namespace LightEngine::Engine
 {
-class Presets
+class Presets : public Utils::Traits::Stringify
 {
     Pool<Pools::Group> m_groups;
     Pool<Pools::Color> m_colors;
@@ -50,7 +50,7 @@ public:
     }
 
     // Multi-line dump of every pool, each under a labelled header.
-    [[nodiscard]] std::string describe() const
+    [[nodiscard]] std::string toString() const override
     {
         std::string s = Utils::Font::bold + "Stored" + Utils::Font::reset;
         s += section("Groups", m_groups);
@@ -64,8 +64,7 @@ private:
     template <class P>
     static std::string section(const std::string &label, const P &pool)
     {
-        return "\n" + Utils::Font::colorYellow + label + Utils::Font::reset +
-               " " + pool.describe();
+        return Utils::Font::format(Utils::Font::group("\n", Theme::accent("{} "), "{}"), label, pool.toString());
     }
 };
 } // namespace LightEngine::Engine

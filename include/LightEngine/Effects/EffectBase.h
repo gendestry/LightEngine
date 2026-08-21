@@ -44,12 +44,12 @@ enum class EffectCategory
     COLOR
 };
 
-#define EFFECT_TYPE(type)                                                      \
-    static EffectType GetStaticType() { return EffectType::type; }             \
-    virtual EffectType GetEffectType() const override                          \
-    {                                                                          \
-        return GetStaticType();                                                \
-    }                                                                          \
+#define EFFECT_TYPE(type)                                          \
+    static EffectType GetStaticType() { return EffectType::type; } \
+    virtual EffectType GetEffectType() const override              \
+    {                                                              \
+        return GetStaticType();                                    \
+    }                                                              \
     virtual const char *GetTypeName() const override { return #type; }
 
 #define EFFECT_CATEGORY(type)                                                  \
@@ -89,7 +89,7 @@ protected:
     // Subclass hook: fill m_cache (already cleared) via emit(). Called only on
     // frames where this effect is due.
     virtual void recompute(const Engine::TimeContext &t,
-                           const DMX::FixtureGroup &group) = 0;
+                           const Utils::Maths::Interval &group) = 0;
 
     void emit(uint16_t fid, const Engine::FixtureValues &values)
     {
@@ -106,18 +106,23 @@ public:
 
     // Does this effect need recomputing this frame? One comparison in the
     // common case - this is what replaces re-running the effect every frame.
-    [[nodiscard]] bool due(double now, const DMX::FixtureGroup &group) const
+
+    [[nodiscard]] bool due(double now, const Utils::Maths::Interval &group) const
     {
-        return m_dirty || group.revision() != m_cachedRevision ||
-               now >= m_nextDue;
+        return m_dirty || now >= m_nextDue;
     }
+    // [[nodiscard]] bool due(double now, const DMX::FixtureGroup &group) const
+    // {
+    //     return m_dirty || group.revision() != m_cachedRevision ||
+    //            now >= m_nextDue;
+    // }
 
     // Recompute the cache and schedule the next wake-up.
-    void evaluate(const Engine::TimeContext &t, const DMX::FixtureGroup &group)
+    void evaluate(const Engine::TimeContext &t, const Utils::Maths::Interval &group)
     {
         m_cache.clear();
         recompute(t, group);
-        m_cachedRevision = group.revision();
+        // m_cachedRevision = group.revision();
         m_dirty = false;
         scheduleNext(t.now);
     }

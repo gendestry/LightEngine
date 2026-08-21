@@ -6,7 +6,7 @@
 namespace LightEngine::Engine::Pools
 {
 
-class Color : public Engine::PoolObject
+class Color : public PoolObject
 {
     std::shared_ptr<Effects::StaticColor> m_effect;
 
@@ -16,9 +16,13 @@ public:
     {
     }
 
-    std::string describe() const override
+    [[nodiscard]] std::string toString() const override
     {
-        return "Color " + std::to_string(number()) + " \"" + name() + "\" ";
+        const auto nameExpr =
+            name().empty() ? Theme::dim("Unnamed") : Theme::txt("{}");
+
+        return Utils::Font::format(Utils::Font::group(Theme::lbl("Color Preset "), "[", Theme::num("{}"), "]: ", nameExpr),
+                                   number(), name());
     }
 };
 } // namespace LightEngine::Engine::Pools

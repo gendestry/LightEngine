@@ -30,7 +30,7 @@ namespace LightEngine::Engine
 //
 // The live editing layer - what the CommandBuilder/CLI drives. Holds the user's
 // edits per fixture; a selection scopes the bulk setters.
-class Programmer //: public Layer
+class Programmer : public Utils::Traits::Stringify
 {
     // The live selection: transient, ordered, cached. NOT a Pools::Group - that
     // is a stored object; this is "what I'm editing right now". Engine
@@ -39,6 +39,7 @@ class Programmer //: public Layer
     Effects::EffectGroup m_runningEffects;
     GroupSelection m_selection;
     StaticEffectHolder m_staticEffects;
+    Utils::Maths::Interval m_interval;
 
     // std::map<Effects::EffectCategory, std::list<Effects::EffectWrapper>>
     //     m_staticEffects;
@@ -68,9 +69,11 @@ public:
     // FixtureGroup overloads take an already-resolved selection; the FID
     // overloads resolve through the patch (skips unpatched FIDs).
     void select(const DMX::FixtureGroup &g);
+    void select(const Utils::Maths::Interval &fids);
     void select(const std::vector<uint16_t> &fids);
     void add(const DMX::FixtureGroup &g);
     void add(const std::vector<uint16_t> &fids);
+    void add(const Utils::Maths::Interval &fids);
 
     void applyEffect(std::shared_ptr<Effects::EffectWrapper> eff);
     // The live selection is the current stack's selection.
@@ -88,7 +91,7 @@ public:
     void setIntensity(float v);
 
     StaticEffectHolder &getStaticEffects() { return m_staticEffects; }
-    const DMX::FixtureGroup &selected() const { return m_selection.get(); }
+    const Utils::Maths::Interval &selected() const { return m_interval; }
 
     // void applyHueSat(uint16_t fid, float h, float s);
     // void applyIntensity(uint16_t fid, float v);
@@ -108,11 +111,26 @@ public:
     // void clearValues() { m_edits.clear(); } // keep selection
     void clearAll()
     {
+        m_interval.clear();
         m_runningEffects.clear();
         m_staticEffects.clear();
-        // running.stacks.clear();
-        // running.createNew(); // keep an active stack so c_ptr stays valid
     } // wipe both
+
+    [[nodiscard]] std::string toString() const override
+    {
+        Utils::Text::Stream s;
+        for (auto &[fid, vals] : m_staticEffects.getValues())
+        {
+            auto i = vals.intensity;
+            auto c = vals.color;
+
+            std::string in = i.has_value() ? std::to_string(*i) : "/";
+            std::string color = c.has_value() ? c->toString() : "No color";
+            s << Utils::String::format("{:2}, int: {} ... {}", fid, in, color);
+        };
+
+        return s.end();
+    };
 
     // int priority() const override { return 1000; } // programmer wins
     // void apply(Frame &frame, const TimeContext &time) override;

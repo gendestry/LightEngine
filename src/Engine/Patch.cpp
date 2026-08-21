@@ -137,8 +137,8 @@ std::string Patch::toString() const
     std::string desc = std::format("Patch: {} fixtures across {} universes\n",
                                    m_fixtures.size(), m_universes.size());
 
-    for (auto fix : m_fixtures)
-        desc += fix.second->toString() + "\n";
+    // for (auto fix : m_fixtures)
+    //     desc += fix.second->toString() + "\n";
     for (const auto &[id, uni] : m_universes)
     {
         desc += uni.dump();

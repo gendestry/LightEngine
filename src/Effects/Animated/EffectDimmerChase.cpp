@@ -45,9 +45,9 @@ void DimmerChase::setCurve(Utils::Maths::Type type)
 }
 
 void DimmerChase::recompute(const Engine::TimeContext &t,
-                            const DMX::FixtureGroup &g)
+                            const Utils::Maths::Interval &g)
 {
-    const auto &fids = g.fids();
+    const auto &fids = g.values();
     const std::size_t n = fids.size();
     if (n == 0 || !m_curve)
         return;
