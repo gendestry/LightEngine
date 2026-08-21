@@ -7,6 +7,7 @@
 
 #include "LightEngine/Engine/Layers/Frame.h"
 #include "LightEngine/Fixture/ColorCell.h"
+#include "LightEngine/Fixture/FixtureTemplate.h"
 #include "LightEngine/Fixture/Parameter.h"
 #include "LightEngine/GDTF/LogicalChannel.h"
 #include "Utils/Storage/FragmentedStorage.h"
@@ -30,9 +31,10 @@ namespace LightEngine::Fixtures
 {
 class Fixture : public Utils::Fragment, public Utils::Traits::Stringify
 {
-    std::string m_name = "fixture";
+    std::shared_ptr<FixtureTemplate> m_config;
+    // std::string m_name = "fixture";
     uint16_t m_fid = 0;
-    // uint16_t m_universe = 0;
+    uint16_t m_universe = 0;
     uint8_t *m_buffer = nullptr; // -> universe buffer (non-owning)
 
     std::vector<Parameter> m_parameters;
@@ -42,6 +44,17 @@ class Fixture : public Utils::Fragment, public Utils::Traits::Stringify
 public:
     Fixture() = default;
     explicit Fixture(std::string name);
+
+    explicit Fixture(std::shared_ptr<FixtureTemplate> tmpl)
+        : m_config(std::move(tmpl))
+    {
+        for (const auto &config : m_config->parameters)
+        {
+            Add(config.definition, config.cellIndex);
+        }
+
+        Build();
+    }
 
     // Deep copy: parameters are copied, then the index + cells are rebuilt so
     // their pointers aim at THIS instance's parameters (not the source's).
@@ -82,7 +95,7 @@ public:
     // per-universe fragment id.
     [[nodiscard]] std::string toString() const override;
 
-    const std::string &Name() const { return m_name; }
+    const std::string &Name() const { return m_config->name; }
     uint16_t Fid() const { return m_fid; }
     void SetFid(uint16_t fid) { m_fid = fid; }
     // uint16_t Universe() const { return m_universe; }

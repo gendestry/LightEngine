@@ -9,6 +9,7 @@
 
 #include "Utils/Colors/HSV.h"
 #include "Utils/Colors/RGB.h"
+#include "Utils/Math/Interval.h"
 
 #include "LightEngine/Fixture/Fixture.h"
 #include "LightEngine/GDTF/LogicalChannel.h"
@@ -29,6 +30,8 @@ class FixtureGroup
     std::string m_name;
     std::vector<FixturePtr> m_fixtures;
     std::set<uint16_t> m_usedUniverses;
+
+    Utils::Maths::Interval selected;
 
     // caches, rebuilt lazily from m_fixtures (pointers into the fixtures,
     // stable because the fixtures are held by shared_ptr).

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <memory>
 
+#include "LightEngine/Fixture/ParameterConfig.h"
 #include "LightEngine/GDTF/LogicalChannel.h"
 
 //
@@ -21,13 +22,18 @@ class Parameter
 {
     std::shared_ptr<const GDTF::LogicalChannel> m_def;
     uint8_t *m_bytes = nullptr;
-    std::optional<uint32_t> m_baseOffset;
+    uint32_t m_baseOffset = 0;
     uint16_t m_cellIndex = 0;
 
 public:
-    Parameter() = default;
+    Parameter() = delete;
     explicit Parameter(std::shared_ptr<const GDTF::LogicalChannel> def)
         : m_def(std::move(def))
+    {
+    }
+
+    explicit Parameter(const ParameterConfig &config)
+        : m_def(config.definition), m_cellIndex(config.cellIndex)
     {
     }
 
@@ -37,10 +43,7 @@ public:
     }
 
     void SetBuffer(uint8_t *bytes) { m_bytes = bytes; }
-    void SetBaseOffset(std::optional<uint32_t> offset)
-    {
-        m_baseOffset = offset;
-    }
+    void SetBaseOffset(uint32_t offset) { m_baseOffset = offset; }
     void SetCellIndex(uint16_t cell) { m_cellIndex = cell; }
 
     // ---- queries ----
@@ -61,8 +64,8 @@ public:
 
     void Unbind()
     {
-        SetBuffer(nullptr);
-        SetBaseOffset(std::nullopt);
+        m_bytes = nullptr;
+        m_baseOffset = 0;
     }
 
     void Write(float value)
@@ -94,7 +97,7 @@ public:
 private:
     void WriteRaw(const GDTF::DMXChannel &ch, uint16_t dmx)
     {
-        uint32_t addr = m_baseOffset.value() + ch.address;
+        uint32_t addr = m_baseOffset + ch.address;
         if (ch.res == GDTF::DMXChannel::Resolution::Bit8)
         {
             m_bytes[addr] = static_cast<uint8_t>(dmx);

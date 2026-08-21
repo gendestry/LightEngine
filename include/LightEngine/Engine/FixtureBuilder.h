@@ -22,8 +22,9 @@ class FixtureBuilder
     Fixture fixture;
     uint16_t currentOffset = 0;
 
-    std::shared_ptr<const GDTF::LogicalChannel> MakeChannel8Bit(Attribute attr,
-                                                                uint16_t offset)
+public:
+    static std::shared_ptr<const GDTF::LogicalChannel> MakeChannel8Bit(Attribute attr,
+                                                                       uint16_t offset)
     {
         GDTF::LogicalChannel lc;
         lc.attribute = attr;
@@ -32,7 +33,6 @@ class FixtureBuilder
         return std::make_shared<const GDTF::LogicalChannel>(std::move(lc));
     }
 
-public:
     explicit FixtureBuilder(const std::string &name) : fixture(name) {}
     FixtureBuilder(const std::string &name,
                    std::initializer_list<Attribute> attributes)

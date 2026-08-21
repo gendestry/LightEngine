@@ -331,14 +331,18 @@ int main()
     auto rgb = lib.find("RGB").value();
 
     // RGB fixtures (3 channels each) across three universes.
-    auto fids8 = engine.patch(rgb, 8, 10);
+    auto fids8 = engine.patch(rgb, 8, 93);
+    auto fids9 = engine.patch(rgb, 9, 120);
+    auto fids10 = engine.patch(rgb, 10, 60);
     // auto fids9 = engine.patch(rgb, 9, 10);
     // auto fids10 = engine.patch(rgb, 10, 11);
 
     auto &prog = engine.programmer();
     prog.select(fids8);
-    prog.setColor({255, 0, 0});
-    prog.setIntensity(1.f);
+    prog.add(fids9);
+    prog.add(fids10);
+    prog.setColor({255, 255, 255});
+    prog.setIntensity(0.f);
 
     auto &h = prog.getStaticEffects().getValues();
     for (auto &[k, v] : h)
@@ -406,7 +410,8 @@ int main()
     std::cout << "\nfinal universe state:\n";
     for (const auto &[id, uni] : engine.patcher().universes())
     {
-        std::cout << "Universe " << id << ":\n" << uni.dump() << "\n";
+        std::cout << "Universe " << id << ":\n"
+                  << uni.dump() << "\n";
     }
 
     std::cout << engine.toString();

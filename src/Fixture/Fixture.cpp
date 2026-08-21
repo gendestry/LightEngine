@@ -31,21 +31,25 @@ bool isColorAttribute(GDTF::Attribute attr)
 }
 } // namespace
 
-Fixture::Fixture(std::string name) : m_name(std::move(name)) {}
+Fixture::Fixture(std::string name) { m_config->name = name; };
 
 std::string Fixture::toString() const
 {
     // std::stringstream ss;
     // ss << "FID: " << m_fid << " \"" << m_name << "\" [" << size << " bytes]";
     return Utils::String::format("Fixture '{}':  fid: {}, size: {} bytes",
-                                 m_name, m_fid, size);
+                                 m_config->name, m_fid, size);
 }
 
 Fixture::Fixture(const Fixture &other)
-    : Utils::Fragment(other), m_name(other.m_name), m_fid(other.m_fid),
-      /*m_universe(other.m_universe),*/ m_buffer(other.m_buffer),
+    : Utils::Fragment(other), m_config(other.m_config), m_fid(other.m_fid),
+      m_universe(other.m_universe), m_buffer(nullptr),
       m_parameters(other.m_parameters)
 {
+    for (Parameter &p : m_parameters)
+    {
+        p.Unbind();
+    }
     // rebuild index + cells so their pointers aim at OUR parameters
     Build();
 }
@@ -55,15 +59,45 @@ Fixture &Fixture::operator=(const Fixture &other)
     if (this != &other)
     {
         Utils::Fragment::operator=(other);
-        m_name = other.m_name;
+        // m_name = other.m_name;
+        m_config = other.m_config;
         m_fid = other.m_fid;
-        // m_universe = other.m_universe;
-        m_buffer = other.m_buffer;
+        m_universe = other.m_universe;
+        m_buffer = nullptr;
         m_parameters = other.m_parameters;
+
+        for (Parameter &p : m_parameters)
+        {
+            p.Unbind();
+        }
         Build();
     }
     return *this;
 }
+
+// Fixture::Fixture(const Fixture &other)
+//     : Utils::Fragment(other), m_name(other.m_name), m_fid(other.m_fid),
+//       /*m_universe(other.m_universe),*/ m_buffer(other.m_buffer),
+//       m_parameters(other.m_parameters)
+// {
+//     // rebuild index + cells so their pointers aim at OUR parameters
+//     Build();
+// }
+
+// Fixture &Fixture::operator=(const Fixture &other)
+// {
+//     if (this != &other)
+//     {
+//         Utils::Fragment::operator=(other);
+//         m_name = other.m_name;
+//         m_fid = other.m_fid;
+//         // m_universe = other.m_universe;
+//         m_buffer = other.m_buffer;
+//         m_parameters = other.m_parameters;
+//         Build();
+//     }
+//     return *this;
+// }
 
 Parameter &Fixture::Add(std::shared_ptr<const GDTF::LogicalChannel> def,
                         uint16_t cellIndex)
