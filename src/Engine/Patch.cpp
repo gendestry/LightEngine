@@ -30,6 +30,7 @@ void Patch::registerFixture(uint16_t fid, const FixturePtr &fixture)
     fixture->SetFid(fid);
     // NOTE: no ensureVirtualDimmer() - the virtual dimmer is folded into
     // ColorCell::Resolve() in this engine, so color-only fixtures need nothing.
+    m_fixtureByUID[fixture->getUID()] = fixture;
     m_fixtures[fid] = fixture;
     m_usedFids.insert(fid);
     m_byName[fixture->Name()].push_back(fixture);
@@ -94,6 +95,12 @@ LightEngine::DMX::Universe *Patch::getUniverse(uint16_t universe)
 {
     const auto it = m_universes.find(universe);
     return it != m_universes.end() ? &it->second : nullptr;
+}
+
+Patch::FixturePtr Patch::getFixtureByID(uint64_t id) const
+{
+    const auto it = m_fixtureByUID.find(id);
+    return it != m_fixtureByUID.end() ? it->second : nullptr;
 }
 
 Patch::FixturePtr Patch::getFixture(uint16_t fid) const

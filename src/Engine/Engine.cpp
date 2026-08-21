@@ -36,7 +36,7 @@ Engine::~Engine() = default; // here the command types are complete
 // }
 
 // ---- patching ----
-std::vector<uint16_t> Engine::patch(const std::shared_ptr<Fixtures::Fixture> &fix,
+std::vector<uint16_t> Engine::patch(std::shared_ptr<Fixtures::Fixture> fix,
                                     uint16_t universe, uint16_t amount,
                                     std::optional<uint32_t> start,
                                     std::optional<uint16_t> startFID)

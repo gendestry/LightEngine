@@ -1,7 +1,7 @@
 #pragma once
-#include "FixtureBuilder.h"
 #include "LightEngine/Fixture/Fixture.h"
 #include "LightEngine/Fixture/FixtureTemplate.h"
+#include "LightEngine/FixtureTools/FixtureBuilder.h"
 
 namespace LightEngine::Engine
 {

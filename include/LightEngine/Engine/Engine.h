@@ -7,13 +7,13 @@
 
 #include "LightEngine/Effects/Engine.h"
 #include "LightEngine/Engine/EngineConfig.h"
-#include "LightEngine/Engine/FixtureLibrary.h"
 #include "LightEngine/Engine/Layers/Frame.h"
 #include "LightEngine/Engine/Layers/Layer.h"
 #include "LightEngine/Engine/Layers/Programmer.h"
 #include "LightEngine/Engine/Patch.h"
 #include "LightEngine/Engine/Pools/Presets.h"
 #include "LightEngine/Engine/TimeContext.h"
+#include "LightEngine/FixtureTools/FixtureLibrary.h"
 #include "LightEngine/Output/DMXOutput.h"
 #include "Utils/Logging/Logger.h"
 // #include "Utils/Colors/RGB.h"
@@ -63,7 +63,7 @@ public:
     ~Engine(); // out-of-line: m_parser/m_exec are incomplete types here
 
     std::vector<uint16_t>
-    patch(const std::shared_ptr<Fixtures::Fixture> &fix, uint16_t universe, uint16_t amount,
+    patch(std::shared_ptr<Fixtures::Fixture> fix, uint16_t universe, uint16_t amount,
           std::optional<uint32_t> start = std::nullopt,
           std::optional<uint16_t> startFID = std::nullopt);
 

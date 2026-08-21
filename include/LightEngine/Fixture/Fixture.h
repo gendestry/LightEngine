@@ -34,7 +34,7 @@ class Fixture : public Utils::Fragment, public Utils::Traits::IDGenerator<Fixtur
     std::shared_ptr<FixtureTemplate> m_config;
     // std::string m_name = "fixture";
     uint16_t m_fid = 0;
-    uint16_t m_universe = 0;
+    std::optional<uint16_t> m_universe;
     uint8_t *m_buffer = nullptr; // -> universe buffer (non-owning)
 
     std::vector<Parameter> m_parameters;
@@ -94,19 +94,20 @@ public:
     // render whatever the compositor hands them.
     void Resolve(const Engine::FixtureValues &values);
 
-    // ---- identity ----
-    // Shadows Utils::Fragment::describe(). fragmentsToString() calls
-    // describe() on a shared_ptr<Fixture> (static type), so this resolves
-    // by name-hiding - no virtual needed. Prints the real FID, not the
-    // per-universe fragment id.
     [[nodiscard]] std::string toString() const override;
 
     const std::string &Name() const { return m_config->name; }
     uint16_t Fid() const { return m_fid; }
     void SetFid(uint16_t fid) { m_fid = fid; }
-    // uint16_t Universe() const { return m_universe; }
-    // void SetUniverse(uint16_t universe) { m_universe = universe; }
+
+    std::optional<uint16_t> Universe() const { return m_universe; }
+    void SetUniverse(uint16_t universe) { m_universe = universe; }
+    void Unpatch() { m_universe = std::nullopt; }
+
+    bool isPatched() const { return m_universe.has_value(); }
+
     uint32_t Footprint() const { return size; }
+
     const std::vector<Parameter> &Parameters() const { return m_parameters; }
     const std::map<GDTF::Attribute, std::vector<Parameter *>> &
     ByAttribute() const

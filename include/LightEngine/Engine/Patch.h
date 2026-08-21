@@ -24,11 +24,29 @@
 //
 namespace LightEngine::Engine
 {
+// class PatchSelection : public Utils::Traits::Stringify
+// {
+//     using FixturePtr = std::shared_ptr<LightEngine::Fixtures::Fixture>;
+//     std::map<uint64_t, FixturePtr> fixtures;
+
+// public:
+//     void selectTemplate(FixturePtr ptr)
+//     {
+//         selectedTemplate = ptr;
+//     }
+// };
+
+// struct PatchData
+// {
+//     using FixturePtr = std::shared_ptr<LightEngine::Fixtures::Fixture>;
+//     std::map<uint64_t, FixturePtr> fixtures;
+// };
 class Patch : public Utils::Traits::Stringify
 {
     using FixturePtr = std::shared_ptr<LightEngine::Fixtures::Fixture>;
 
     // FixtureLibrary                            m_library;   // TODO
+    std::map<uint64_t, FixturePtr> m_fixtureByUID;
     std::map<uint16_t, LightEngine::DMX::Universe>
         m_universes;                           // by universe id
     std::map<uint16_t, FixturePtr> m_fixtures; // by FID
@@ -57,6 +75,9 @@ public:
     {
         return m_universes;
     }
+
+    [[nodiscard]] FixturePtr getFixtureByID(uint64_t id) const;
+
     [[nodiscard]] FixturePtr getFixture(uint16_t fid) const;
     [[nodiscard]] std::vector<FixturePtr>
     getFixtures(const std::vector<uint16_t> &fids) const;

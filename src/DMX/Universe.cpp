@@ -39,7 +39,7 @@ void Universe::wireBuffers()
     for (const auto &f : m_fragments)
     {
         f->setBuffer(getBytes());
-        // f->SetUniverse(m_id);
+        f->SetUniverse(m_id);
     }
 }
 

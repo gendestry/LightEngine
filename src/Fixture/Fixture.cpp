@@ -37,8 +37,17 @@ std::string Fixture::toString() const
 {
     // std::stringstream ss;
     // ss << "FID: " << m_fid << " \"" << m_name << "\" [" << size << " bytes]";
-    return Utils::String::format("Fixture '{} [{:3}]:  fid: {:4}, size: {} bytes",
-                                 m_config->name, getUID(), m_fid, size);
+    std::string patched;
+    if (isPatched())
+    {
+        patched = Utils::String::format("uni: {}, addr: {}", m_universe.value(), start);
+    }
+    else
+    {
+        patched = "Unpatched";
+    }
+    return Utils::String::format("'{}' [{}]:  fid: {}, {}, size: {} bytes",
+                                 m_config->name, getUID(), m_fid, patched, size);
 }
 
 Fixture::Fixture(const Fixture &other)

@@ -17,7 +17,7 @@ namespace LightEngine::Engine
 // };
 class FixtureBuilder
 {
-    using Fixture = Fixtures::Fixture;
+    using Fixture = LightEngine::Fixtures::Fixture;
     using Attribute = GDTF::Attribute;
     Fixture fixture;
     uint16_t currentOffset = 0;
