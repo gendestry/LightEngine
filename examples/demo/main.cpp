@@ -328,19 +328,22 @@ int main()
     Engine::Engine engine;
 
     auto &lib = engine.fixtureLibrary();
-    auto rgb = lib.findTemplate("RGB").value();
+    auto rgb = lib.find("RGB");
 
     // RGB fixtures (3 channels each) across three universes.
-    auto fids8 = engine.patchTemplate(rgb, 8, 93);
-    auto fids9 = engine.patchTemplate(rgb, 9, 120);
-    auto fids10 = engine.patchTemplate(rgb, 10, 60);
-    // auto fids9 = engine.patch(rgb, 9, 10);
+    // auto fids8 = engine.patch(rgb, 8, 93);
+    // auto fids9 = engine.patch(rgb, 9, 120);
+    // auto fids10 = engine.patch(rgb, 10, 60);
+    auto fids8 = engine.patch(rgb, 1, 10);
+    auto fids9 = engine.patch(rgb, 1, 10);
+    auto fids10 = engine.patch(rgb, 1, 10);
     // auto fids10 = engine.patch(rgb, 10, 11);
 
     auto &prog = engine.programmer();
     prog.select(fids8);
     prog.add(fids9);
     prog.add(fids10);
+    // prog.select(fids);
     prog.setColor({255, 128, 0});
     prog.setIntensity(0.3f);
 
@@ -385,35 +388,35 @@ int main()
 
     // Render at 40 fps for two seconds, printing fixture 1's R channel (colour
     // is red, so R == 255 * intensity) so the wave is visible as a column.
-    const float dt = 1.f / 40.f;
-    const std::size_t frames = 80;
+    // const float dt = 1.f / 40.f;
+    // const std::size_t frames = 80;
 
-    std::cout << "frame   t      fid1..fid" << fids8.size() << " (R channel)\n";
-    for (std::size_t i = 0; i < frames; ++i)
-    {
-        engine.update(dt);
+    // std::cout << "frame   t      fid1..fid" << fids8.size() << " (R channel)\n";
+    // for (std::size_t i = 0; i < frames; ++i)
+    // {
+    //     engine.update(dt);
 
-        // std::cout << std::setw(5) << i << std::setw(7) << std::fixed
-        //           << std::setprecision(3) << engine.time().now << "   ";
-        for (uint16_t fid : fids8)
-        {
-            // R is the fixture's first channel; read it straight out of the
-            // // universe buffer, i.e. the bytes that would go on the wire.
-            // const auto fx = engine.patcher().getFixture(fid);
-            // const auto &buf =
-            //     engine.patcher().universes().at(fx->Universe()).buffer();
-            // std::cout << std::setw(4) << static_cast<int>(buf[fx->start]);
-        }
-        // std::cout << "\n";
-    }
+    //     // std::cout << std::setw(5) << i << std::setw(7) << std::fixed
+    //     //           << std::setprecision(3) << engine.time().now << "   ";
+    //     for (uint16_t fid : fids8)
+    //     {
+    //         // R is the fixture's first channel; read it straight out of the
+    //         // // universe buffer, i.e. the bytes that would go on the wire.
+    //         // const auto fx = engine.patcher().getFixture(fid);
+    //         // const auto &buf =
+    //         //     engine.patcher().universes().at(fx->Universe()).buffer();
+    //         // std::cout << std::setw(4) << static_cast<int>(buf[fx->start]);
+    //     }
+    //     // std::cout << "\n";
+    // }
 
-    std::cout << "\nfinal universe state:\n";
-    for (const auto &[id, uni] : engine.patcher().universes())
-    {
-        std::cout << "Universe " << id << ":\n"
-                  << uni.dump() << "\n";
-    }
+    // std::cout << "\nfinal universe state:\n";
+    // for (const auto &[id, uni] : engine.patcher().universes())
+    // {
+    //     std::cout << "Universe " << id << ":\n"
+    //               << uni.dump() << "\n";
+    // }
 
-    std::cout << engine.toString();
-    return 0;
+    // std::cout << engine.toString();
+    // return 0;
 };

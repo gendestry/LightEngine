@@ -90,14 +90,6 @@ Patch::patch(const LightEngine::Fixtures::Fixture &fixture, uint16_t universe,
     return fids;
 }
 
-std::vector<uint16_t> Patch::patchTemplate(std::shared_ptr<Fixtures::FixtureTemplate> fixtureTemp, uint16_t universe,
-                                           uint16_t amount, std::optional<uint32_t> start,
-                                           std::optional<uint16_t> startFID)
-{
-    Fixtures::Fixture fix(fixtureTemp);
-    return patch(fix, universe, amount, start, startFID);
-}
-
 LightEngine::DMX::Universe *Patch::getUniverse(uint16_t universe)
 {
     const auto it = m_universes.find(universe);
@@ -138,6 +130,8 @@ std::string Patch::toString() const
     std::string desc = std::format("Patch: {} fixtures across {} universes\n",
                                    m_fixtures.size(), m_universes.size());
 
+    for (auto fix : m_fixtures)
+        desc += fix.second->toString() + "\n";
     for (const auto &[id, uni] : m_universes)
     {
         desc += uni.dump();

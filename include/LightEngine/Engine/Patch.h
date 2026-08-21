@@ -50,11 +50,6 @@ public:
           uint16_t amount, std::optional<uint32_t> start = std::nullopt,
           std::optional<uint16_t> startFID = std::nullopt);
 
-    std::vector<uint16_t>
-    patchTemplate(std::shared_ptr<Fixtures::FixtureTemplate> fixtureTemp, uint16_t universe,
-                  uint16_t amount, std::optional<uint32_t> start = std::nullopt,
-                  std::optional<uint16_t> startFID = std::nullopt);
-
     // ---- lookup ----
     [[nodiscard]] LightEngine::DMX::Universe *getUniverse(uint16_t universe);
     [[nodiscard]] const std::map<uint16_t, LightEngine::DMX::Universe> &

@@ -11,7 +11,7 @@
 #include "LightEngine/Fixture/Parameter.h"
 #include "LightEngine/GDTF/LogicalChannel.h"
 #include "Utils/Storage/FragmentedStorage.h"
-#include "Utils/Traits/Stringify.h"
+#include "Utils/Traits/ID.h"
 
 //
 // Fixture: one patched light. It is a Utils::Fragment, so a Universe
@@ -29,7 +29,7 @@
 //
 namespace LightEngine::Fixtures
 {
-class Fixture : public Utils::Fragment, public Utils::Traits::Stringify
+class Fixture : public Utils::Fragment, public Utils::Traits::IDGenerator<Fixture>
 {
     std::shared_ptr<FixtureTemplate> m_config;
     // std::string m_name = "fixture";
@@ -60,6 +60,12 @@ public:
     // their pointers aim at THIS instance's parameters (not the source's).
     Fixture(const Fixture &other);
     Fixture &operator=(const Fixture &other);
+
+    // Move: steals the parameters (and the UID, via IDGenerator's move), then
+    // rebuilds the index + cells - the pointers must aim at OUR vector even if
+    // the moved-from buffer happened to survive the steal.
+    Fixture(Fixture &&other) noexcept;
+    Fixture &operator=(Fixture &&other) noexcept;
 
     // ---- build ----
     // Append a parameter from a shared definition, tagged with its

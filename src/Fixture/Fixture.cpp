@@ -37,8 +37,8 @@ std::string Fixture::toString() const
 {
     // std::stringstream ss;
     // ss << "FID: " << m_fid << " \"" << m_name << "\" [" << size << " bytes]";
-    return Utils::String::format("Fixture '{}':  fid: {}, size: {} bytes",
-                                 m_config->name, m_fid, size);
+    return Utils::String::format("Fixture '{} [{:3}]:  fid: {:4}, size: {} bytes",
+                                 m_config->name, getUID(), m_fid, size);
 }
 
 Fixture::Fixture(const Fixture &other)
@@ -98,6 +98,39 @@ Fixture &Fixture::operator=(const Fixture &other)
 //     }
 //     return *this;
 // }
+
+Fixture::Fixture(Fixture &&other) noexcept
+    : Utils::Fragment(std::move(other)),
+      Utils::Traits::IDGenerator<Fixture>(std::move(other)),
+      m_config(std::move(other.m_config)), m_fid(other.m_fid),
+      m_universe(other.m_universe), m_buffer(other.m_buffer),
+      m_parameters(std::move(other.m_parameters))
+{
+    other.m_buffer = nullptr;
+    other.m_byAttribute.clear();
+    other.m_colorCells.clear();
+    Build();
+}
+
+Fixture &Fixture::operator=(Fixture &&other) noexcept
+{
+    if (this != &other)
+    {
+        Utils::Fragment::operator=(std::move(other));
+        Utils::Traits::IDGenerator<Fixture>::operator=(std::move(other));
+        m_config = std::move(other.m_config);
+        m_fid = other.m_fid;
+        m_universe = other.m_universe;
+        m_buffer = other.m_buffer;
+        m_parameters = std::move(other.m_parameters);
+
+        other.m_buffer = nullptr;
+        other.m_byAttribute.clear();
+        other.m_colorCells.clear();
+        Build();
+    }
+    return *this;
+}
 
 Parameter &Fixture::Add(std::shared_ptr<const GDTF::LogicalChannel> def,
                         uint16_t cellIndex)

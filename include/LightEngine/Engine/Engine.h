@@ -63,14 +63,9 @@ public:
     ~Engine(); // out-of-line: m_parser/m_exec are incomplete types here
 
     std::vector<uint16_t>
-    patch(const Fixtures::Fixture &fixture, uint16_t universe, uint16_t amount,
+    patch(const std::shared_ptr<Fixtures::Fixture> &fix, uint16_t universe, uint16_t amount,
           std::optional<uint32_t> start = std::nullopt,
           std::optional<uint16_t> startFID = std::nullopt);
-
-    std::vector<uint16_t>
-    patchTemplate(std::shared_ptr<Fixtures::FixtureTemplate> fixtureTemp, uint16_t universe,
-                  uint16_t amount, std::optional<uint32_t> start = std::nullopt,
-                  std::optional<uint16_t> startFID = std::nullopt);
 
     // // ---- stored pools ----
     // [[nodiscard]] Stored &stored() { return m_stored; }
