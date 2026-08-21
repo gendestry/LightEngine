@@ -16,18 +16,22 @@ struct Config : Utils::Traits::Stringify
 
     [[nodiscard]] std::string toString() const override
     {
-        // Utils::Text::Stream s;
         std::string ips = "";
         if (output)
         {
-            ips = std::format("[{}]", Utils::String::colorWrap(
-                                          Utils::Font::colorGreen, ip.str()));
+            ips = Utils::Font::format(Utils::Font::group("[", Theme::ok("{}"), "]"), ip.str());
         }
-        std::string ret = std::format(
-            "{}{} v{}", Utils::String::colorWrap(Utils::Font::colorBlue, name),
-            ips, version);
+        else
+        {
+            ips = Utils::Font::format(Utils::Font::group("[", Theme::err("Disconnected"), "]"));
+        }
 
-        return ret;
+        return Utils::Font::format(
+            Utils::Font::group(
+                Utils::Font::B(
+                    Theme::pink("{}")),
+                "{} v{}"),
+            name, ips, version);
     }
 };
 } // namespace LightEngine::Engine
