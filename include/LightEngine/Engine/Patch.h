@@ -47,9 +47,8 @@ class Patch : public Utils::Traits::Stringify
 
     // FixtureLibrary                            m_library;   // TODO
     std::map<uint64_t, FixturePtr> m_fixtureByUID;
-    std::map<uint16_t, LightEngine::DMX::Universe>
-        m_universes;                           // by universe id
-    std::map<uint16_t, FixturePtr> m_fixtures; // by FID
+    std::map<uint16_t, LightEngine::DMX::Universe> m_universes; // by universe id
+    std::map<uint16_t, FixturePtr> m_fixtures;                  // by FID
     std::unordered_map<std::string, std::vector<FixturePtr>> m_byName;
     std::set<uint16_t> m_usedFids;
     std::set<uint16_t> m_dirty; // universes needing output
@@ -70,19 +69,15 @@ public:
 
     // ---- lookup ----
     [[nodiscard]] LightEngine::DMX::Universe *getUniverse(uint16_t universe);
-    [[nodiscard]] const std::map<uint16_t, LightEngine::DMX::Universe> &
-    universes() const
+    [[nodiscard]] const std::map<uint16_t, LightEngine::DMX::Universe> &universes() const
     {
         return m_universes;
     }
 
     [[nodiscard]] FixturePtr getFixtureByID(uint64_t id) const;
-
     [[nodiscard]] FixturePtr getFixture(uint16_t fid) const;
-    [[nodiscard]] std::vector<FixturePtr>
-    getFixtures(const std::vector<uint16_t> &fids) const;
-    [[nodiscard]] const std::vector<FixturePtr> &
-    getFixturesByName(const std::string &name) const;
+    [[nodiscard]] std::vector<FixturePtr> getFixtures(const std::vector<uint16_t> &fids) const;
+    [[nodiscard]] const std::vector<FixturePtr> &getFixturesByName(const std::string &name) const;
     [[nodiscard]] const std::map<uint16_t, FixturePtr> &fixtures() const
     {
         return m_fixtures;

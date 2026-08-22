@@ -1,7 +1,7 @@
 #pragma once
 #include "LightEngine/Fixture/Fixture.h"
 #include "LightEngine/Fixture/FixtureTemplate.h"
-#include "LightEngine/FixtureTools/FixtureBuilder.h"
+#include "LightEngine/FixtureTools/ParameterBuilder.h"
 
 namespace LightEngine::Engine
 {
@@ -15,12 +15,11 @@ class FixtureLibrary
 
     void addDefaults()
     {
+        using GDTF::Attribute;
         std::shared_ptr<Fixtures::FixtureTemplate> fixTemp = std::make_shared<Fixtures::FixtureTemplate>("RGB");
-        std::vector<Fixtures::ParameterConfig> parameters;
-        parameters.emplace_back(FixtureBuilder::MakeChannel8Bit(GDTF::Attribute::COLOR_R, 0), 0);
-        parameters.emplace_back(FixtureBuilder::MakeChannel8Bit(GDTF::Attribute::COLOR_G, 1), 0);
-        parameters.emplace_back(FixtureBuilder::MakeChannel8Bit(GDTF::Attribute::COLOR_B, 2), 0);
-        fixTemp->parameters = std::move(parameters);
+        FixtureTools::ParameterCell parCell(0, 0);
+        parCell << GDTF::Attribute::COLOR_R << GDTF::Attribute::COLOR_G << GDTF::Attribute::COLOR_B;
+        fixTemp->parameters = std::move(parCell.get());
 
         vendor.fixtures["RGB"] = std::make_shared<Fixtures::Fixture>(fixTemp);
     }

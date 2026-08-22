@@ -34,7 +34,7 @@ class Fixture : public Utils::Fragment, public Utils::Traits::IDGenerator<Fixtur
     std::shared_ptr<FixtureTemplate> m_config;
     // std::string m_name = "fixture";
     uint16_t m_fid = 0;
-    std::optional<uint16_t> m_universe;
+    std::optional<uint16_t> m_universe = std::nullopt;
     uint8_t *m_buffer = nullptr; // -> universe buffer (non-owning)
 
     std::vector<Parameter> m_parameters;

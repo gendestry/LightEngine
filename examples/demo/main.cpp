@@ -309,6 +309,7 @@
 // #include "LightEngine/Commands/CommandExecutor.h"
 // #include "LightEngine/Commands/CommandParser.h"
 // #include "LightEngine/DMX/Universe.h"
+#include "LightEngine/Engine/Components/Patch.h"
 #include "LightEngine/Engine/Engine.h"
 #include "Utils/Colors/HSV.h"
 // #include "Utils/Commands/Args.h"
@@ -329,46 +330,67 @@ int main()
     auto &lib = engine.fixtureLibrary();
     auto rgb = lib.find("RGB");
 
+    Engine::Components::Patch p;
+    p.patch(*rgb, 1, 10);
+    p.patch(*rgb, 2, 10);
+
+    int i = 0;
+    for (auto [k, fix] : p.fixs())
+    {
+        Engine::FixtureValues v;
+        v.intensity = i++ / (static_cast<float>(20.f) - 1.f);
+        v.color = Utils::Colors::RGB(255, 128, 0).toHSV();
+        std::cout << fix->toString() << std::endl;
+        fix->Resolve(v);
+    }
+    std::cout << p.toString();
+
+    return 0;
+
     // RGB fixtures (3 channels each) across three universes.
-    // auto fids8 = engine.patch(rgb, 8, 93);
-    // auto fids9 = engine.patch(rgb, 9, 120);
-    // auto fids10 = engine.patch(rgb, 10, 60);
-    auto fids8 = engine.patch(rgb, 1, 10);
-    auto fids9 = engine.patch(rgb, 1, 10);
-    auto fids10 = engine.patch(rgb, 1, 10);
+    auto fids8 = engine.patch(rgb, 8, 93);
+    auto fids9 = engine.patch(rgb, 9, 120);
+    auto fids10 = engine.patch(rgb, 10, 60);
+    // auto fids8 = engine.patch(rgb, 1, 10);
+    // auto fids9 = engine.patch(rgb, 1, 10);
+    // auto fids10 = engine.patch(rgb, 1, 10);
     // auto fids10 = engine.patch(rgb, 10, 11);
 
     auto &prog = engine.programmer();
     prog.select(fids8);
-    prog.add(fids9);
-    prog.add(fids10);
-    engine.storeGroup();
-    prog.select(fids8);
-    engine.storeGroup();
-    prog.select(fids9);
-    engine.storeGroup();
-    prog.select(fids10);
-    engine.storeGroup();
-    // prog.select(fids8);
-    // engine.selectGroup(2);
-    // prog.setColor({255, 128, 0});
-    engine.selectGroup(2);
-    // prog.select(fids9);
-    prog.setColor({0, 0, 255});
-    engine.selectGroup(3);
-    prog.setColor({255, 0, 0});
-    engine.appendGroup(4);
     prog.setIntensity(1.f);
-    engine.selectGroup(2);
-    engine.appendGroup(3);
-    engine.storeColorPreset(1);
 
-    // prog.add(fids8);
-    // engine.storeColorPreset();
-    prog.clearAll();
-    engine.selectGroup(1);
-    engine.recallColorPreset(1);
-    prog.setIntensity(1.f);
+    prog.select(fids9);
+    prog.setIntensity(0.5f);
+    // prog.add(fids9);
+    // prog.add(fids10);
+    // engine.storeGroup();
+    // prog.select(fids8);
+    // engine.storeGroup();
+    // prog.select(fids9);
+    // engine.storeGroup();
+    // prog.select(fids10);
+    // engine.storeGroup();
+    // // prog.select(fids8);
+    // // engine.selectGroup(2);
+    // // prog.setColor({255, 128, 0});
+    // engine.selectGroup(2);
+    // // prog.select(fids9);
+    // prog.setColor({0, 0, 255});
+    // engine.selectGroup(3);
+    // prog.setColor({255, 0, 0});
+    // engine.appendGroup(4);
+    // prog.setIntensity(1.f);
+    // engine.selectGroup(2);
+    // engine.appendGroup(3);
+    // engine.storeColorPreset(1);
+
+    // // prog.add(fids8);
+    // // engine.storeColorPreset();
+    // prog.clearAll();
+    // engine.selectGroup(1);
+    // engine.recallColorPreset(1);
+    // prog.setIntensity(1.f);
     // auto colors = prog.getStaticEffects().getColor(prog.selected());
     // for (auto &[k, v] : colors)
     // {
