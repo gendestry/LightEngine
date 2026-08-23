@@ -5,11 +5,12 @@
 #include <set>
 #include <string>
 
+#include "LightEngine/Engine/Components/Patch.h"
 #include "Utils/Network/IP.h"
 #include "Utils/Network/SACN.h"
 
 #include "LightEngine/DMX/Universe.h"
-#include "LightEngine/Engine/Patch.h"
+// #include "LightEngine/Engine/Patch.h"
 
 //
 // DMXOutput: the transmit stage. Holds one sACN sender per universe, lazily
@@ -43,9 +44,9 @@ public:
     void send(const LightEngine::DMX::Universe &universe);
 
     // Send only the universes in `dirty` (looked up in `patch`).
-    void update(const std::set<uint16_t> &dirty, Engine::Patch &patch);
+    void update(const std::set<uint16_t> &dirty, Engine::Components::Patch &patch);
 
     // Send every universe in the patch.
-    void sendAll(Engine::Patch &patch);
+    void sendAll(Engine::Components::Patch &patch);
 };
 } // namespace LightEngine::Output

@@ -4,10 +4,9 @@
 #include <memory>
 #include <vector>
 
-#include "LightEngine/DMX/FixtureGroup.h"
 #include "LightEngine/Engine/Layers/Frame.h"
-#include "LightEngine/Engine/Patch.h"
-#include "LightEngine/Engine/TimeContext.h"
+// #include "LightEngine/Engine/Patch.h"
+#include "Utils/Time/TimeContext.h"
 
 //
 // Layer: anything that produces values for a frame. Programmer, playback and
@@ -44,7 +43,7 @@ public:
     [[nodiscard]] virtual bool enabled() const { return true; }
 
     // Write this layer's contribution into the frame for this tick.
-    virtual void apply(Frame &frame, const TimeContext &time) = 0;
+    virtual void apply(Frame &frame, const Utils::Time::TimeContext &time) = 0;
 };
 
 // The live editing layer - what the CommandBuilder/CLI drives. Holds the user's

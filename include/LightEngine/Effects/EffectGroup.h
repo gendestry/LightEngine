@@ -1,5 +1,4 @@
 #pragma once
-#include "LightEngine/DMX/FixtureGroup.h"
 #include "LightEngine/Effects/EffectBase.h"
 #include "LightEngine/Engine/Layers/Layer.h"
 #include <memory>
@@ -72,7 +71,7 @@ public:
         return std::nullopt;
     }
 
-    void apply(LightEngine::Engine::Frame &frame, const LightEngine::Engine::TimeContext &time) override
+    void apply(LightEngine::Engine::Frame &frame, const Utils::Time::TimeContext &time) override
     {
         for (auto &wrapper : applied)
         {

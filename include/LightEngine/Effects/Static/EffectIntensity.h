@@ -31,7 +31,7 @@ public:
     EFFECT_CATEGORY(DIMMER);
 
 protected:
-    void recompute(const LightEngine::Engine::TimeContext &t,
+    void recompute(const Utils::Time::TimeContext &t,
                    const Utils::Maths::Interval &g) override;
     // [[nodiscard]] Spec spec() const override;
 };

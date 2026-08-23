@@ -42,16 +42,16 @@ void DMXOutput::send(const LightEngine::DMX::Universe &universe)
     ensureSender(universe.id()).send(universe.buffer());
 }
 
-void DMXOutput::update(const std::set<uint16_t> &dirty, Engine::Patch &patch)
+void DMXOutput::update(const std::set<uint16_t> &dirty, Engine::Components::Patch &patch)
 {
-    for (uint16_t universe : dirty)
-        if (const LightEngine::DMX::Universe *uni = patch.getUniverse(universe))
-            send(*uni);
+    // for (uint16_t universe : dirty)
+    //     if (const LightEngine::DMX::Universe *uni = patch.getUniverse(universe))
+    //         send(*uni);
 }
 
-void DMXOutput::sendAll(Engine::Patch &patch)
+void DMXOutput::sendAll(Engine::Components::Patch &patch)
 {
-    for (const auto &[id, uni] : patch.universes())
-        send(uni);
+    // for (const auto &[id, uni] : patch.universes())
+    //     send(uni);
 }
 } // namespace LightEngine::Output

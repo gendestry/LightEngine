@@ -3,7 +3,7 @@
 namespace LightEngine::Effects
 {
 
-void StaticIntensity::recompute(const Engine::TimeContext &,
+void StaticIntensity::recompute(const Utils::Time::TimeContext &,
                                 const Utils::Maths::Interval &g)
 {
     Engine::FixtureValues v;

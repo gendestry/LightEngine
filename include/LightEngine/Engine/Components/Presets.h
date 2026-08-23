@@ -15,7 +15,7 @@
 // numbers (groups, presets, cues/sequences, effects...). The Engine reaches
 // through here rather than owning a loose pool per type.
 //
-namespace LightEngine::Engine
+namespace LightEngine::Engine::Components
 {
 class Presets : public Utils::Traits::Stringify
 {
@@ -67,4 +67,4 @@ private:
         return Utils::Font::format(Utils::Font::group("\n", Theme::accent("{} "), "{}"), label, pool.toString());
     }
 };
-} // namespace LightEngine::Engine
+} // namespace LightEngine::Engine::Components

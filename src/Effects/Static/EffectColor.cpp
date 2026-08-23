@@ -5,7 +5,7 @@
 namespace LightEngine::Effects
 {
 
-void StaticColor::recompute(const Engine::TimeContext &,
+void StaticColor::recompute(const Utils::Time::TimeContext &,
                             const Utils::Maths::Interval &group)
 {
     // The RGB -> HSV conversion now happens once per edit instead of once per

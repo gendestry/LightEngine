@@ -8,7 +8,7 @@
 
 namespace LightEngine::Engine
 {
-Engine::Engine() : m_programmer(m_patch), logger("Engine")
+Engine::Engine() : logger("Engine")
 {
     m_output.setIP(m_config.ip);
     m_output.setSourceName(m_config.name);
@@ -253,9 +253,9 @@ void Engine::update(float dt)
     //     run.
     if (m_config.output)
     {
-        m_output.sendAll(m_patch);
+        // m_output.sendAll(m_patch);
     }
-    m_patch.clearDirty();
+    // m_patch.clearDirty();
 }
 
 std::string Engine::toString() const

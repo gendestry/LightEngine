@@ -1,54 +1,26 @@
 #pragma once
 #include <cstdint>
-
-#include "LightEngine/DMX/FixtureGroup.h"
-// #include "LightEngine/Effects/EffectFactory.h"
-#include "LightEngine/Effects/EffectGroup.h"
-#include "LightEngine/Engine/Layers/Frame.h"
-#include "LightEngine/Engine/Layers/Layer.h"
-#include "LightEngine/Engine/Patch.h"
-#include "LightEngine/Engine/Selection.h"
-#include "LightEngine/Engine/TimeContext.h"
-
-#include "LightEngine/Effects/EffectBase.h"
-#include <list>
-#include <map>
 #include <memory>
 #include <vector>
+
+#include "LightEngine/Effects/EffectGroup.h"
+#include "LightEngine/Engine/Selection.h"
 
 //
 // Layer: anything that produces values for a frame. Programmer, playback and
 // effects are all just layers. update() composes them low priority -> high, so
 // a higher-priority layer's LTP writes land on top of a lower one's.
 //
-namespace LightEngine::Engine
+namespace LightEngine::Engine::Components
 {
 
-// struct StaticEffectPool
-// {
-// };
-//
-// The live editing layer - what the CommandBuilder/CLI drives. Holds the user's
-// edits per fixture; a selection scopes the bulk setters.
 class Programmer : public Utils::Traits::Stringify
 {
-    Patch &m_patch; // resolves raw FIDs -> live fixtures for selection
     Effects::EffectGroup m_runningEffects;
     StaticEffectHolder m_staticEffects;
     Utils::Maths::Interval m_interval;
 
 public:
-    explicit Programmer(Patch &patch)
-        : m_patch(patch)
-    {
-    }
-    // explicit Programmer(Patch &patch) : Layer(Priority::PROG), m_patch(patch)
-    // {}
-
-    // ---- selection ----
-    // select() replaces the current selection, add() accumulates onto it.
-    // FixtureGroup overloads take an already-resolved selection; the FID
-    // overloads resolve through the patch (skips unpatched FIDs).
     void select(const Utils::Maths::Interval &fids);
     void select(const std::vector<uint16_t> &fids);
     void add(const std::vector<uint16_t> &fids);
@@ -177,4 +149,4 @@ public:
 //     [[nodiscard]] DMX::FixtureGroup selectedGroup() const { return
 //     m_selection; }
 // };
-} // namespace LightEngine::Engine
+} // namespace LightEngine::Engine::Components

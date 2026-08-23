@@ -5,17 +5,16 @@
 #include <string>
 #include <vector>
 
-#include "LightEngine/Effects/Engine.h"
+#include "LightEngine/Engine/Components/FixtureLibrary.h"
+#include "LightEngine/Engine/Components/Patch.h"
+#include "LightEngine/Engine/Components/Presets.h"
+#include "LightEngine/Engine/Components/Programmer.h"
 #include "LightEngine/Engine/EngineConfig.h"
 #include "LightEngine/Engine/Layers/Frame.h"
 #include "LightEngine/Engine/Layers/Layer.h"
-#include "LightEngine/Engine/Layers/Programmer.h"
-#include "LightEngine/Engine/Patch.h"
-#include "LightEngine/Engine/Pools/Presets.h"
-#include "LightEngine/Engine/TimeContext.h"
-#include "LightEngine/FixtureTools/FixtureLibrary.h"
 #include "LightEngine/Output/DMXOutput.h"
 #include "Utils/Logging/Logger.h"
+#include "Utils/Time/TimeContext.h"
 // #include "Utils/Colors/RGB.h"
 // #include "LightEngine/Show/Sequence.h"      // TODO: playback / cues
 
@@ -38,18 +37,19 @@ namespace LightEngine::Engine
 class Engine : public Utils::Traits::Stringify
 {
     Config m_config;
-    Patch m_patch;
-    TimeContext m_time; // advanced each update(); threaded into layers
-    FixtureLibrary m_library;
+
+    Components::FixtureLibrary m_library;
+    Components::Patch m_patch;
+    Components::Programmer m_programmer; // live editing layer
 
     Output::DMXOutput m_output; // sACN transmit stage
 
     Frame m_frame;                      // per-frame merged values (rebuilt each tick)
-    Programmer m_programmer;            // live editing layer
     std::vector<Layer *> m_layers = {}; // composed low -> high
 
-    Presets m_presets; // all object pools (groups, presets, cues...) live here
+    Components::Presets m_presets; // all object pools (groups, presets, cues...) live here
     Utils::Logger logger;
+    Utils::Time::TimeContext m_time; // advanced each update(); threaded into layers
 
 public:
     Engine();
@@ -74,13 +74,13 @@ public:
     void update(float dt = 0.f);
 
     // // ---- layers ----
-    [[nodiscard]] Programmer &programmer() { return m_programmer; }
     void addLayer(Layer *layer) { m_layers.push_back(layer); }
 
-    [[nodiscard]] const TimeContext &time() const { return m_time; }
-    [[nodiscard]] const Patch &patcher() const { return m_patch; }
-    [[nodiscard]] const Presets &presets() const { return m_presets; }
-    [[nodiscard]] FixtureLibrary &fixtureLibrary()
+    [[nodiscard]] const Utils::Time::TimeContext &time() const { return m_time; }
+    [[nodiscard]] Components::Patch &patcher() { return m_patch; }
+    [[nodiscard]] Components::Programmer &programmer() { return m_programmer; }
+    [[nodiscard]] const Components::Presets &presets() const { return m_presets; }
+    [[nodiscard]] Components::FixtureLibrary &fixtureLibrary()
     {
         return m_library;
     }

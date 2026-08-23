@@ -2,15 +2,19 @@
 #include "LightEngine/Fixture/Fixture.h"
 #include "LightEngine/Fixture/FixtureTemplate.h"
 #include "LightEngine/FixtureTools/ParameterBuilder.h"
+#include <unordered_map>
 
-namespace LightEngine::Engine
+namespace LightEngine::Engine::Components
 {
-struct Vendor
-{
-    std::map<std::string, std::shared_ptr<Fixtures::Fixture>> fixtures;
-};
+
 class FixtureLibrary
 {
+    struct Vendor
+    {
+        std::map<std::string, std::shared_ptr<Fixtures::Fixture>> fixtures;
+        std::unordered_map<std::string, Fixtures::FixtureTemplate> templates;
+    };
+
     Vendor vendor;
 
     void addDefaults()
@@ -21,6 +25,7 @@ class FixtureLibrary
         parCell << GDTF::Attribute::COLOR_R << GDTF::Attribute::COLOR_G << GDTF::Attribute::COLOR_B;
         fixTemp->parameters = std::move(parCell.get());
 
+        // vendor.templates["RGB"] =
         vendor.fixtures["RGB"] = std::make_shared<Fixtures::Fixture>(fixTemp);
     }
 
@@ -39,4 +44,4 @@ public:
         return nullptr;
     };
 };
-} // namespace LightEngine::Engine
+} // namespace LightEngine::Engine::Components

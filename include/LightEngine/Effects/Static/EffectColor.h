@@ -41,7 +41,7 @@ public:
     // }
 
 protected:
-    void recompute(const LightEngine::Engine::TimeContext &t,
+    void recompute(const Utils::Time::TimeContext &t,
                    const Utils::Maths::Interval &group) override;
 
 public:

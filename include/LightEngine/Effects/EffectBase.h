@@ -10,8 +10,8 @@
 #include "LightEngine/DMX/FixtureGroup.h"
 // #include "LightEngine/Effects/EffectSpec.h"
 #include "LightEngine/Engine/Layers/Frame.h"
-#include "LightEngine/Engine/TimeContext.h"
 #include "Utils/Math/Curve.h"
+#include "Utils/Time/TimeContext.h"
 
 //
 // Effect: a unit of behaviour, evaluated only when it has something new to say.
@@ -88,7 +88,7 @@ protected:
 
     // Subclass hook: fill m_cache (already cleared) via emit(). Called only on
     // frames where this effect is due.
-    virtual void recompute(const Engine::TimeContext &t,
+    virtual void recompute(const Utils::Time::TimeContext &t,
                            const Utils::Maths::Interval &group) = 0;
 
     void emit(uint16_t fid, const Engine::FixtureValues &values)
@@ -118,7 +118,7 @@ public:
     // }
 
     // Recompute the cache and schedule the next wake-up.
-    void evaluate(const Engine::TimeContext &t, const Utils::Maths::Interval &group)
+    void evaluate(const Utils::Time::TimeContext &t, const Utils::Maths::Interval &group)
     {
         m_cache.clear();
         recompute(t, group);

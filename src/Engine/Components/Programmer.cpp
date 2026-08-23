@@ -1,10 +1,10 @@
-#include "LightEngine/Engine/Layers/Programmer.h"
+#include "LightEngine/Engine/Components/Programmer.h"
 
 #include "LightEngine/Effects/Static/EffectColor.h"
 #include "LightEngine/Effects/Static/EffectIntensity.h"
 #include "Utils/Colors/Colors.h"
 
-namespace LightEngine::Engine
+namespace LightEngine::Engine::Components
 {
 namespace
 {
@@ -101,4 +101,4 @@ void Programmer::setIntensity(float v)
 //     //     }
 //     // }
 // }
-} // namespace LightEngine::Engine
+} // namespace LightEngine::Engine::Components
