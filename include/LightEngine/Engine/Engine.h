@@ -61,15 +61,15 @@ public:
           std::optional<uint16_t> startFID = std::nullopt);
 
     // // Select a stored group into the programmer (replace).
-    void selectGroup(uint32_t num);
-    void appendGroup(uint32_t num);
+    // void selectGroup(uint32_t num);
+    // void appendGroup(uint32_t num);
     // // Snapshot the current selection into the group pool at `num` / next
     Pools::Group &storeGroup(uint32_t num);
     Pools::Group &storeGroup();
 
-    Pools::Color &storeColorPreset(uint32_t num);
-    Pools::Color &storeColorPreset();
-    void recallColorPreset(uint32_t num);
+    // Pools::Color &storeColorPreset(uint32_t num);
+    // Pools::Color &storeColorPreset();
+    // void recallColorPreset(uint32_t num);
 
     void update(float dt = 0.f);
 

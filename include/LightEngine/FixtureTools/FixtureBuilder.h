@@ -1,11 +1,34 @@
-// #pragma once
-// #include "LightEngine/Fixture/Fixture.h"
+#pragma once
+#include "LightEngine/Fixture/Fixture.h"
+#include "LightEngine/FixtureTools/ParameterBuilder.h"
 // #include "LightEngine/GDTF/LogicalChannel.h"
 // #include <initializer_list>
 // #include <memory>
 
-// namespace LightEngine::FixtureTools
-// {
+namespace LightEngine::FixtureTools
+{
+struct FixtureBuilder
+{
+    std::shared_ptr<Fixtures::FixtureTemplate> ftemplate;
+    uint16_t cellIndex = 0;
+    uint16_t relOffset = 0;
+    FixtureTools::ParameterCell parCell;
+
+    FixtureBuilder &create(const std::string &name)
+    {
+        ftemplate = std::make_shared<Fixtures::FixtureTemplate>(name);
+        return *this;
+    }
+
+    FixtureBuilder &newCell()
+    {
+        cellIndex++;
+        return *this;
+    }
+
+    void addColorRed() {}
+};
+} // namespace LightEngine::FixtureTools
 
 // class FixtureBuilder
 // {

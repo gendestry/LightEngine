@@ -30,6 +30,8 @@ std::vector<uint16_t> Patch::patch(Fixtures::Fixture *fixtemplate, uint16_t univ
                                    uint16_t amount, std::optional<uint32_t> start,
                                    std::optional<uint16_t> startFID)
 {
+    logger.debug("Patching {} '{}' to uni:{} addr:{}", amount, fixtemplate->Name(), universe, start.has_value() ? *start : 0);
+
     if (amount == 0)
     {
         logger.error("Trying to patch 0 fixtures");
@@ -37,7 +39,6 @@ std::vector<uint16_t> Patch::patch(Fixtures::Fixture *fixtemplate, uint16_t univ
     }
 
     const auto &fixture = *fixtemplate;
-    logger.debug("here");
 
     LightEngine::DMX::UniversePatch &uni = getUniverse(universe);
 
@@ -60,6 +61,7 @@ std::vector<uint16_t> Patch::patch(Fixtures::Fixture *fixtemplate, uint16_t univ
     {
         auto f = fixtures[i];
         auto &pinfo = placed[i].get();
+        m_fixtureStatus[previd] = {universe, pinfo.id};
 
         f->setBuffer(uni.getRaw());
         f->setStart(pinfo.start);
@@ -67,6 +69,8 @@ std::vector<uint16_t> Patch::patch(Fixtures::Fixture *fixtemplate, uint16_t univ
         f->SetUniverse(universe);
         fids.push_back(f->Fid());
     }
+
+    logger.debug("Patched {} '{}' to uni:{} addr:[{}-{}]", amount, fixtemplate->Name(), universe, start.has_value() ? *start : 0, placed.back().get().start + placed.back().get().size - 1);
 
     return fids;
 
@@ -93,6 +97,14 @@ std::vector<uint16_t> Patch::patch(Fixtures::Fixture *fixtemplate, uint16_t univ
     // return {};
 
     // TODO: temp
+}
+
+void Patch::clearDMXBuffers()
+{
+    for (auto &[_, uni] : m_universes)
+    {
+        uni.clearBuffer();
+    }
 }
 
 std::string Patch::toString() const

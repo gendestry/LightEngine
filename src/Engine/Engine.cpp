@@ -42,7 +42,6 @@ std::vector<uint16_t> Engine::patch(Fixtures::Fixture *fixtemplate,
                                     std::optional<uint32_t> start,
                                     std::optional<uint16_t> startFID)
 {
-    m_logger.debug("Patching {} '{}' to uni:{} addr:{}", amount, fixtemplate->Name(), universe, start.has_value() ? *start : 0);
     return m_patch.patch(fixtemplate, universe, amount, start, startFID);
 }
 
@@ -57,31 +56,31 @@ std::vector<uint16_t> Engine::patch(Fixtures::Fixture *fixtemplate,
 // ---- programmer ----
 // void Engine::clear() { m_programmer.clearAll(); }
 
-void Engine::selectGroup(uint32_t num)
-{
-    if (auto grp = m_presets.groups().get(num))
-    {
-        m_programmer.select(grp->fixtureGroup());
-        m_logger.debug("Selected Group {} {}", num, grp->fixtureGroup().toString());
-    }
-    else
-    {
-        m_logger.warn("Group {} does not exist", num);
-    }
-}
+// void Engine::selectGroup(uint32_t num)
+// {
+//     if (auto grp = m_presets.groups().get(num))
+//     {
+//         m_programmer.select(grp->fixtureGroup());
+//         m_logger.debug("Selected Group {} {}", num, grp->fixtureGroup().toString());
+//     }
+//     else
+//     {
+//         m_logger.warn("Group {} does not exist", num);
+//     }
+// }
 
-void Engine::appendGroup(uint32_t num)
-{
-    if (auto grp = m_presets.groups().get(num))
-    {
-        m_programmer.add(grp->fixtureGroup());
-        m_logger.debug("Appended Group {} {}", num, m_programmer.selected().toString());
-    }
-    else
-    {
-        m_logger.warn("Group {} does not exist", num);
-    }
-}
+// void Engine::appendGroup(uint32_t num)
+// {
+//     if (auto grp = m_presets.groups().get(num))
+//     {
+//         m_programmer.add(grp->fixtureGroup());
+//         m_logger.debug("Appended Group {} {}", num, m_programmer.selected().toString());
+//     }
+//     else
+//     {
+//         m_logger.warn("Group {} does not exist", num);
+//     }
+// }
 
 Pools::Group &Engine::storeGroup(uint32_t num)
 {
@@ -97,32 +96,32 @@ Pools::Group &Engine::storeGroup()
 // // Captures the whole programmer, not just the current selection: every fixture
 // // touched since the last clear() is banked, so a preset built across several
 // // selections (group then a stray fixture) keeps them all.
-Pools::Color &Engine::storeColorPreset(uint32_t num)
-{
-    return m_presets.colors().emplaceAt(
-        num,
-        std::make_shared<Effects::StaticColor>(
-            m_programmer.getStaticEffects().getColor(m_programmer.selected())));
-}
+// Pools::Color &Engine::storeColorPreset(uint32_t num)
+// {
+//     return m_presets.colors().emplaceAt(
+//         num,
+//         std::make_shared<Effects::StaticColor>(
+//             m_programmer.getStaticEffects().getColor(m_programmer.selected())));
+// }
 
-Pools::Color &Engine::storeColorPreset()
-{
-    return m_presets.colors().emplace(
-        std::make_shared<Effects::StaticColor>(
-            m_programmer.getStaticEffects().getColor(m_programmer.selected())));
-}
+// Pools::Color &Engine::storeColorPreset()
+// {
+//     return m_presets.colors().emplace(
+//         std::make_shared<Effects::StaticColor>(
+//             m_programmer.getStaticEffects().getColor(m_programmer.selected())));
+// }
 
-void Engine::recallColorPreset(uint32_t num)
-{
-    if (auto preset = m_presets.colors().get(num))
-    {
-        //         for (auto it : preset->get())
-        //         {
-        //             m_programmer.applyEffect(it);
-        //         }
-    }
-    //     // preset->recall(m_programmer, m_programmer.selection());
-}
+// void Engine::recallColorPreset(uint32_t num)
+// {
+//     if (auto preset = m_presets.colors().get(num))
+//     {
+//         //         for (auto it : preset->get())
+//         //         {
+//         //             m_programmer.applyEffect(it);
+//         //         }
+//     }
+//     //     // preset->recall(m_programmer, m_programmer.selection());
+// }
 
 // // ---- dimmer presets ----
 // Pools::DimmerPreset &Engine::storeDimmerPreset(uint32_t num)
@@ -220,7 +219,7 @@ void Engine::update(float dt)
     m_time.now += dt;
     ++m_time.frame;
 
-    // m_patch.blackout();
+    m_patch.clearDMXBuffers();
 
     // 1. compose: layers write their contributions into the frame, composed
     // in
@@ -236,17 +235,19 @@ void Engine::update(float dt)
     //         layer->apply(m_frame, m_time);
     //     }
     // }
+    m_programmer.apply(m_frame, m_time);
 
     // 2. resolve: push each fixture's merged values into its DMX buffer.
     //    Fixtures are stateless sinks - anything not addressed this frame stays
     //    at the blackout value.
-    // for (const auto &[fid, values] : m_frame.all())
-    // {
-    //     if (auto fixture = m_patch.getFixture(fid))
-    //     {
-    //         fixture->Resolve(values);
-    //     }
-    // }
+    auto &fixs = m_patch.fixs();
+    for (const auto &[fid, values] : m_frame.all())
+    {
+        // if (auto fixture = m_patch.getFixture(fid))
+        // {
+        fixs[fid]->Resolve(values);
+        // }
+    }
 
     // 3. output: continuous full-frame send, as a real sACN source does.
     // Only
@@ -254,7 +255,7 @@ void Engine::update(float dt)
     //     run.
     if (m_config.output)
     {
-        // m_output.sendAll(m_patch);
+        m_output.sendAll(m_patch);
     }
     // m_patch.clearDirty();
 }

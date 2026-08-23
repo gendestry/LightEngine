@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "LightEngine/DMX/FragUni.h"
+#include "LightEngine/DMX/UniversePatch.h"
 #include "LightEngine/Fixture/Fixture.h"
 #include "Utils/Logging/Logger.h"
 
@@ -16,12 +16,19 @@ namespace LightEngine::Engine::Components
 {
 class Patch : public Utils::Traits::Stringify
 {
+    struct FixtureStatus
+    {
+        uint16_t universe;
+        uint32_t patchInfoID;
+    };
+
     using FixturePtr = std::shared_ptr<LightEngine::Fixtures::Fixture>;
 
     Utils::Logger logger;
 
     uint64_t m_fixCurrentID = 0;
     std::map<uint64_t, FixturePtr> m_fixtureByUID;
+    std::map<uint64_t, std::optional<FixtureStatus>> m_fixtureStatus;
     std::unordered_map<uint16_t, std::vector<uint64_t>> m_fixtureByFIDs;
 
     std::map<uint16_t, LightEngine::DMX::UniversePatch> m_universes; // by universe id
@@ -35,8 +42,10 @@ public:
                                 uint16_t amount, std::optional<uint32_t> start = std::nullopt,
                                 std::optional<uint16_t> startFID = std::nullopt);
 
+    void clearDMXBuffers();
+
     // temp
-    const std::map<uint64_t, FixturePtr> &fixs()
+    std::map<uint64_t, FixturePtr> &fixs()
     {
         return m_fixtureByUID;
     }

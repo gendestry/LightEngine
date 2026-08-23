@@ -17,7 +17,7 @@ namespace LightEngine::Engine::Components
 class Programmer : public Utils::Traits::Stringify
 {
     Effects::EffectGroup m_runningEffects;
-    StaticEffectHolder m_staticEffects;
+    // StaticEffectHolder m_staticEffects;
     Utils::Maths::Interval m_interval;
 
 public:
@@ -33,7 +33,9 @@ public:
     void setColor(const Utils::Colors::RGB &rgb); // converts to HSV, hue/sat
     void setIntensity(float v);
 
-    StaticEffectHolder &getStaticEffects() { return m_staticEffects; }
+    void addDimmerChase();
+
+    // StaticEffectHolder &getStaticEffects() { return m_staticEffects; }
     const Utils::Maths::Interval &selected() const { return m_interval; }
 
     void clearCurrent() {}
@@ -41,21 +43,23 @@ public:
     {
         m_interval.clear();
         m_runningEffects.clear();
-        m_staticEffects.clear();
+        // m_staticEffects.clear();
     } // wipe both
+
+    void apply(Frame &frame, const Utils::Time::TimeContext &time);
 
     [[nodiscard]] std::string toString() const override
     {
         Utils::Text::Stream s;
-        for (auto &[fid, vals] : m_staticEffects.getValues())
-        {
-            auto i = vals.intensity;
-            auto c = vals.color;
+        // for (auto &[fid, vals] : m_staticEffects.getValues())
+        // {
+        //     auto i = vals.intensity;
+        //     auto c = vals.color;
 
-            std::string in = i.has_value() ? std::to_string(*i) : "/";
-            std::string color = c.has_value() ? c->toString() : "No color";
-            s << Utils::String::format("{:2}, int: {} ... {}", fid, in, color);
-        };
+        //     std::string in = i.has_value() ? std::to_string(*i) : "/";
+        //     std::string color = c.has_value() ? c->toString() : "No color";
+        //     s << Utils::String::format("{:2}, int: {} ... {}", fid, in, color);
+        // };
 
         return s.end();
     };
