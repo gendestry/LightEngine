@@ -37,9 +37,9 @@ void DMXOutput::setSourceName(const std::string &name)
         sender.setSourceName(name);
 }
 
-void DMXOutput::send(const LightEngine::DMX::Universe &universe)
+void DMXOutput::send(const LightEngine::DMX::UniversePatch &universe)
 {
-    ensureSender(universe.id()).send(universe.buffer());
+    ensureSender(universe.getID()).send(universe.buffer());
 }
 
 void DMXOutput::update(const std::set<uint16_t> &dirty, Engine::Components::Patch &patch)
@@ -51,7 +51,7 @@ void DMXOutput::update(const std::set<uint16_t> &dirty, Engine::Components::Patc
 
 void DMXOutput::sendAll(Engine::Components::Patch &patch)
 {
-    // for (const auto &[id, uni] : patch.universes())
-    //     send(uni);
+    for (const auto &[id, uni] : patch.universes())
+        send(uni);
 }
 } // namespace LightEngine::Output

@@ -8,11 +8,11 @@
 
 namespace LightEngine::Engine
 {
-Engine::Engine() : logger("Engine")
+Engine::Engine() : m_logger("Engine")
 {
     m_output.setIP(m_config.ip);
     m_output.setSourceName(m_config.name);
-    logger.setLoggerLevel(Utils::Logger::DEBUGGING);
+    m_logger.setLoggerLevel(Utils::Logger::DEBUGGING);
 } // m_patch declared first -> safe
 Engine::~Engine() = default; // here the command types are complete
 
@@ -37,12 +37,13 @@ Engine::~Engine() = default; // here the command types are complete
 // }
 
 // ---- patching ----
-std::vector<uint16_t> Engine::patch(std::shared_ptr<Fixtures::Fixture> fix,
+std::vector<uint16_t> Engine::patch(Fixtures::Fixture *fixtemplate,
                                     uint16_t universe, uint16_t amount,
                                     std::optional<uint32_t> start,
                                     std::optional<uint16_t> startFID)
 {
-    return m_patch.patch(*fix, universe, amount, start, startFID);
+    m_logger.debug("Patching {} '{}' to uni:{} addr:{}", amount, fixtemplate->Name(), universe, start.has_value() ? *start : 0);
+    return m_patch.patch(fixtemplate, universe, amount, start, startFID);
 }
 
 // std::vector<uint16_t>
@@ -61,11 +62,11 @@ void Engine::selectGroup(uint32_t num)
     if (auto grp = m_presets.groups().get(num))
     {
         m_programmer.select(grp->fixtureGroup());
-        logger.debug("Selected Group {} {}", num, grp->fixtureGroup().toString());
+        m_logger.debug("Selected Group {} {}", num, grp->fixtureGroup().toString());
     }
     else
     {
-        logger.warn("Group {} does not exist", num);
+        m_logger.warn("Group {} does not exist", num);
     }
 }
 
@@ -74,11 +75,11 @@ void Engine::appendGroup(uint32_t num)
     if (auto grp = m_presets.groups().get(num))
     {
         m_programmer.add(grp->fixtureGroup());
-        logger.debug("Appended Group {} {}", num, m_programmer.selected().toString());
+        m_logger.debug("Appended Group {} {}", num, m_programmer.selected().toString());
     }
     else
     {
-        logger.warn("Group {} does not exist", num);
+        m_logger.warn("Group {} does not exist", num);
     }
 }
 

@@ -2,7 +2,7 @@
 
 using namespace LightEngine::Engine::Components;
 
-LightEngine::DMX::Universe &Patch::getUniverse(uint16_t universe)
+LightEngine::DMX::UniversePatch &Patch::getUniverse(uint16_t universe)
 {
     auto it = m_universes.find(universe);
     if (it == m_universes.end())
@@ -19,14 +19,14 @@ std::vector<Patch::FixturePtr> Patch::addFixtures(const Fixtures::Fixture &fixtu
     for (int i = 0; i < amount; i++)
     {
         auto fix = std::make_shared<Fixtures::Fixture>(fixture);
-        m_fixtureByUID[fix->id] = std::move(fix);
-        fixtures.push_back(m_fixtureByUID[fix->id]);
+        m_fixtureByUID[m_fixCurrentID] = std::move(fix);
+        fixtures.push_back(m_fixtureByUID[m_fixCurrentID++]);
     }
 
     return fixtures;
 }
 
-std::vector<uint16_t> Patch::patch(const Fixtures::Fixture &fixture, uint16_t universe,
+std::vector<uint16_t> Patch::patch(Fixtures::Fixture *fixtemplate, uint16_t universe,
                                    uint16_t amount, std::optional<uint32_t> start,
                                    std::optional<uint16_t> startFID)
 {
@@ -36,32 +36,61 @@ std::vector<uint16_t> Patch::patch(const Fixtures::Fixture &fixture, uint16_t un
         return {};
     }
 
+    const auto &fixture = *fixtemplate;
+    logger.debug("here");
+
+    LightEngine::DMX::UniversePatch &uni = getUniverse(universe);
+
     uint32_t addr = start.has_value() ? *start : 0;
-    logger.debug("Here");
+    auto placed = uni.addMultiple(fixture.size, addr, amount);
 
-    LightEngine::DMX::Universe &uni = getUniverse(universe);
-    logger.debug("{}", fixture.toString());
-
-    std::vector<FixturePtr> placed;
-    if (start.has_value())
+    if (placed.empty())
     {
-        placed = uni.addFixtures(fixture, amount, *start);
-    }
-    else
-    {
-        placed.reserve(amount);
-        for (uint16_t i = 0; i < amount; ++i)
-        {
-            placed.push_back(uni.addFixture(fixture));
-        }
+        logger.error("Something went wrong");
+        return {};
     }
 
-    for (auto fix : placed)
+    auto previd = m_fixCurrentID;
+    auto fixtures = addFixtures(fixture, amount);
+
+    std::vector<uint16_t> fids;
+    fids.reserve(amount);
+
+    for (int i = 0; i < amount; i++)
     {
-        fix->SetFid(fix->getUID());
-        m_fixtureByUID[fix->getUID()] = std::move(fix);
+        auto f = fixtures[i];
+        auto &pinfo = placed[i].get();
+
+        f->setBuffer(uni.getRaw());
+        f->setStart(pinfo.start);
+        f->SetFid(previd++);
+        f->SetUniverse(universe);
+        fids.push_back(f->Fid());
     }
-    return {};
+
+    return fids;
+
+    // std::vector<FixturePtr> placed;
+
+    // if (start.has_value())
+    // {
+    //     placed = uni.addFixtures(fixture, amount, *start);
+    // }
+    // else
+    // {
+    //     placed.reserve(amount);
+    //     for (uint16_t i = 0; i < amount; ++i)
+    //     {
+    //         placed.push_back(uni.addFixture(fixture));
+    //     }
+    // }
+
+    // for (auto fix : placed)
+    // {
+    //     fix->SetFid(m_fixCurrentID);
+    //     m_fixtureByUID[m_fixCurrentID++] = std::move(fix);
+    // }
+    // return {};
 
     // TODO: temp
 }

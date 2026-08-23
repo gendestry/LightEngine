@@ -46,8 +46,8 @@ std::string Fixture::toString() const
     {
         patched = "Unpatched";
     }
-    return Utils::String::format("'{}' [{}]:  fid: {}, {}, size: {} bytes",
-                                 m_config->name, getUID(), m_fid, patched, size);
+    return Utils::String::format("'{}':  fid: {}, {}, size: {} bytes",
+                                 m_config->name, m_fid, patched, size);
 }
 
 Fixture::Fixture(const Fixture &other)
@@ -110,7 +110,7 @@ Fixture &Fixture::operator=(const Fixture &other)
 
 Fixture::Fixture(Fixture &&other) noexcept
     : Utils::Fragment(std::move(other)),
-      Utils::Traits::IDGenerator<Fixture>(std::move(other)),
+      //   Utils::Traits::IDGenerator<Fixture>(std::move(other)),
       m_config(std::move(other.m_config)), m_fid(other.m_fid),
       m_universe(other.m_universe), m_buffer(other.m_buffer),
       m_parameters(std::move(other.m_parameters))
@@ -126,7 +126,7 @@ Fixture &Fixture::operator=(Fixture &&other) noexcept
     if (this != &other)
     {
         Utils::Fragment::operator=(std::move(other));
-        Utils::Traits::IDGenerator<Fixture>::operator=(std::move(other));
+        // Utils::Traits::IDGenerator<Fixture>::operator=(std::move(other));
         m_config = std::move(other.m_config);
         m_fid = other.m_fid;
         m_universe = other.m_universe;

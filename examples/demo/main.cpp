@@ -298,25 +298,14 @@
 //     return 0;
 // }
 
-#include <atomic>
-#include <chrono>
-#include <iomanip>
 #include <iostream>
-#include <mutex>
 #include <string>
-#include <thread>
 
-// #include "LightEngine/Commands/CommandExecutor.h"
-// #include "LightEngine/Commands/CommandParser.h"
-// #include "LightEngine/DMX/Universe.h"
+#include "LightEngine/DMX/FragUni.h"
 #include "LightEngine/Engine/Engine.h"
 #include "Utils/Colors/HSV.h"
-// #include "Utils/Commands/Args.h"
-#include "Utils/Network/Interfaces.h"
 
 using namespace LightEngine;
-using Fixtures::Fixture;
-using GDTF::Attribute;
 
 #ifndef LE_DATA_DIR
 #define LE_DATA_DIR "include/LightEngine/Commands/data"
@@ -324,10 +313,28 @@ using GDTF::Attribute;
 
 int main()
 {
+    Utils::Logger logger("test");
+    logger.setLevel(Utils::Logger::DEBUGGING);
     Engine::Engine engine;
 
     auto &lib = engine.fixtureLibrary();
     auto rgb = lib.find("RGB");
+
+    // LightEngine::DMX::UniversePatch uni(1);
+    // auto t1 = uni.addMultiple(rgb->Footprint(), 0, 5);
+    // auto t2 = uni.addMultiple(rgb->Footprint(), 20, 7);
+    // auto t1 = uni.addMultiple(rgb->Footprint(), 0, 10);
+    // for (auto t : t1)
+    // {
+    //     logger.println("[{:2}]: addr:{}, size:{}", t.get().id, t.get().start, t.get().size);
+    // }
+
+    // for (auto t : t2)
+    // {
+    //     logger.println("[{:2}]: addr:{}, size:{}", t.get().id, t.get().start, t.get().size);
+    // }
+
+    // return 0;
 
     engine.patch(rgb, 1, 10);
     engine.patch(rgb, 2, 10);

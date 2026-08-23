@@ -29,7 +29,7 @@
 //
 namespace LightEngine::Fixtures
 {
-class Fixture : public Utils::Fragment, public Utils::Traits::IDGenerator<Fixture>
+class Fixture : public Utils::Fragment
 {
     std::shared_ptr<FixtureTemplate> m_config;
     // std::string m_name = "fixture";

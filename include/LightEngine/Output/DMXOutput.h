@@ -9,9 +9,6 @@
 #include "Utils/Network/IP.h"
 #include "Utils/Network/SACN.h"
 
-#include "LightEngine/DMX/Universe.h"
-// #include "LightEngine/Engine/Patch.h"
-
 //
 // DMXOutput: the transmit stage. Holds one sACN sender per universe, lazily
 // created, and streams universe buffers onto the network. It reads the live
@@ -41,7 +38,7 @@ public:
     void setSourceName(const std::string &name);
 
     // Send one universe's current frame.
-    void send(const LightEngine::DMX::Universe &universe);
+    void send(const LightEngine::DMX::UniversePatch &universe);
 
     // Send only the universes in `dirty` (looked up in `patch`).
     void update(const std::set<uint16_t> &dirty, Engine::Components::Patch &patch);

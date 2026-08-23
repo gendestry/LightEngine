@@ -41,14 +41,14 @@ class Engine : public Utils::Traits::Stringify
     Components::FixtureLibrary m_library;
     Components::Patch m_patch;
     Components::Programmer m_programmer; // live editing layer
+    Components::Presets m_presets;       // all object pools (groups, presets, cues...) live here
 
     Output::DMXOutput m_output; // sACN transmit stage
 
     Frame m_frame;                      // per-frame merged values (rebuilt each tick)
     std::vector<Layer *> m_layers = {}; // composed low -> high
 
-    Components::Presets m_presets; // all object pools (groups, presets, cues...) live here
-    Utils::Logger logger;
+    Utils::Logger m_logger;
     Utils::Time::TimeContext m_time; // advanced each update(); threaded into layers
 
 public:
@@ -56,7 +56,7 @@ public:
     ~Engine(); // out-of-line: m_parser/m_exec are incomplete types here
 
     std::vector<uint16_t>
-    patch(std::shared_ptr<Fixtures::Fixture> fix, uint16_t universe, uint16_t amount,
+    patch(Fixtures::Fixture *fix, uint16_t universe, uint16_t amount,
           std::optional<uint32_t> start = std::nullopt,
           std::optional<uint16_t> startFID = std::nullopt);
 
