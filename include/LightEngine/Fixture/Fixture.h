@@ -11,7 +11,6 @@
 #include "LightEngine/Fixture/Parameter.h"
 #include "LightEngine/GDTF/LogicalChannel.h"
 #include "Utils/Storage/FragmentedStorage.h"
-#include "Utils/Traits/ID.h"
 
 //
 // Fixture: one patched light. It is a Utils::Fragment, so a Universe

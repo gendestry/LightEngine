@@ -6,6 +6,7 @@
 #include "LightEngine/Engine/Pools/Color.h"
 #include "LightEngine/Engine/Pools/Group.h"
 #include "LightEngine/Engine/Pools/Pool.h"
+#include "Utils/Logging/Logger.h"
 // #include "LightEngine/Engine/Pools/Sequence.h"  // TODO (cues live inside)
 // #include "LightEngine/Engine/Pools/Effect.h"    // TODO
 
@@ -19,6 +20,7 @@ namespace LightEngine::Engine::Components
 {
 class Presets : public Utils::Traits::Stringify
 {
+    // Utils::Logger logger;
     Pool<Pools::Group> m_groups;
     Pool<Pools::Color> m_colors;
     // Pool<Pools::DimmerPreset> m_dimmerPresets;

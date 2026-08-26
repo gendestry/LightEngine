@@ -7,6 +7,7 @@
 #include <unordered_map>
 
 #include "Utils/Colors/Font.h"
+#include "Utils/Traits/Stringify.h"
 
 namespace LightEngine::Engine
 {

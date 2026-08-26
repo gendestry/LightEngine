@@ -4,6 +4,7 @@
 
 #pragma once
 #include "Utils/Logging/Logger.h"
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <list>
@@ -68,6 +69,19 @@ public:
 
     bool remove(uint32_t fragID);
     void clearBuffer() { m_buffer.fill(0); }
+
+    [[nodiscard]] std::optional<PatchInfo> getInfo(uint32_t id) const
+    {
+        auto it = std::find_if(m_fragments.begin(), m_fragments.end(), [&](const auto &f)
+                               { return f.id == id; });
+
+        if (it == m_fragments.end())
+        {
+            return std::nullopt;
+        }
+
+        return *it;
+    }
 
     [[nodiscard]] inline uint16_t getID() const { return m_id; }
 

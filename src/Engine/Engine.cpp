@@ -1,10 +1,7 @@
 #include "LightEngine/Engine/Engine.h"
-#include "LightEngine/Effects/Static/EffectColor.h"
 
 // #include "LightEngine/Commands/CommandExecutor.h"
 // #include "LightEngine/Commands/CommandParser.h"
-
-#include <algorithm>
 
 namespace LightEngine::Engine
 {
@@ -13,7 +10,7 @@ Engine::Engine() : m_logger("Engine")
     m_output.setIP(m_config.ip);
     m_output.setSourceName(m_config.name);
     m_logger.setLoggerLevel(Utils::Logger::DEBUGGING);
-} // m_patch declared first -> safe
+}
 Engine::~Engine() = default; // here the command types are complete
 
 // ---- text commands ----

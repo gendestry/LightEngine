@@ -17,25 +17,86 @@ Utils::Colors::RGB hueSatToRgb(float h, float s)
 }
 } // namespace
 
+void FixtureSelection::select(const Utils::Maths::Interval &fids)
+{
+    if (fids.empty())
+    {
+        logger.warn("Selecting 0 fixtures");
+    }
+    m_interval = fids;
+    logger.info("Selected fixtures: {}", m_interval.toString());
+}
+
+void FixtureSelection::select(const std::vector<uint16_t> &fids)
+{
+    m_interval.clear();
+    if (fids.empty())
+    {
+        logger.warn("Selecting 0 fixtures");
+    }
+    m_interval.add(fids);
+    logger.info("Selected fixtures: {}", m_interval.toString());
+}
+
+void FixtureSelection::add(const std::vector<uint16_t> &fids)
+{
+    if (fids.empty())
+    {
+        logger.warn("Adding 0 to selection fixtures");
+    }
+    m_interval.add(fids);
+    logger.info("Selected fixtures: {}", m_interval.toString());
+}
+
+void FixtureSelection::add(const Utils::Maths::Interval &fids)
+{
+    if (fids.empty())
+    {
+        logger.warn("Adding 0 to selection fixtures");
+    }
+    m_interval |= fids;
+    logger.info("Selected fixtures: {}", m_interval.toString());
+}
+
 void Programmer::select(const Utils::Maths::Interval &fids)
 {
+    if (fids.empty())
+    {
+        logger.warn("Selecting 0 fixtures");
+    }
     m_interval = fids;
+    logger.info("Selected fixtures: {}", m_interval.toString());
 }
 
 void Programmer::select(const std::vector<uint16_t> &fids)
 {
     m_interval.clear();
+    if (fids.empty())
+    {
+        logger.warn("Selecting 0 fixtures");
+    }
     m_interval.add(fids);
+    logger.info("Selected fixtures: {}", m_interval.toString());
 }
 
 void Programmer::add(const std::vector<uint16_t> &fids)
 {
+    if (fids.empty())
+    {
+        logger.warn("Adding 0 to selection fixtures");
+    }
     m_interval.add(fids);
+    logger.info("Selected fixtures: {}", m_interval.toString());
 }
 
 void Programmer::add(const Utils::Maths::Interval &fids)
 {
+    if (fids.empty())
+    {
+        logger.warn("Adding 0 to selection fixtures");
+    }
     m_interval |= fids;
+    logger.info("Selected fixtures: {}", m_interval.toString());
 }
 
 void Programmer::setColor(const Utils::Colors::RGB &rgb)

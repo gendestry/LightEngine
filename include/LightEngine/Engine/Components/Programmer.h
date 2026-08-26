@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "LightEngine/Effects/EffectGroup.h"
-#include "LightEngine/Engine/Selection.h"
+#include "Utils/Logging/Logger.h"
 
 //
 // Layer: anything that produces values for a frame. Programmer, playback and
@@ -14,13 +14,34 @@
 namespace LightEngine::Engine::Components
 {
 
+class FixtureSelection
+{
+    Utils::Maths::Interval m_interval;
+    Utils::Logger logger;
+
+public:
+    FixtureSelection() : logger("FixSelection") {}
+
+    void select(const Utils::Maths::Interval &fids);
+    void select(const std::vector<uint16_t> &fids);
+    void add(const std::vector<uint16_t> &fids);
+    void add(const Utils::Maths::Interval &fids);
+
+    inline void clear() { m_interval.clear(); };
+    inline uint32_t size() const { return m_interval.size(); }
+    inline const Utils::Maths::Interval &get() const { return m_interval; };
+};
+
 class Programmer : public Utils::Traits::Stringify
 {
     Effects::EffectGroup m_runningEffects;
+    // FixtureSelection m_fixselection;
     // StaticEffectHolder m_staticEffects;
     Utils::Maths::Interval m_interval;
+    Utils::Logger logger;
 
 public:
+    Programmer() : logger("Programmer") {}
     void select(const Utils::Maths::Interval &fids);
     void select(const std::vector<uint16_t> &fids);
     void add(const std::vector<uint16_t> &fids);
@@ -41,6 +62,7 @@ public:
     void clearCurrent() {}
     void clearAll()
     {
+
         m_interval.clear();
         m_runningEffects.clear();
         // m_staticEffects.clear();

@@ -4,6 +4,7 @@
 
 #include "Utils/Colors/ColorFormatter.h"
 #include "Utils/Colors/Theme.h"
+#include "Utils/Traits/Stringify.h"
 
 namespace LightEngine::Engine
 {
