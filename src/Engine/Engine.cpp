@@ -237,14 +237,21 @@ void Engine::update(float dt)
     // 2. resolve: push each fixture's merged values into its DMX buffer.
     //    Fixtures are stateless sinks - anything not addressed this frame stays
     //    at the blackout value.
-    auto &fixs = m_patch.fixs();
+    // auto &fixs = m_patch.fixs();
     for (const auto &[fid, values] : m_frame.all())
     {
-        // if (auto fixture = m_patch.getFixture(fid))
-        // {
-        fixs[fid]->Resolve(values);
-        // }
+        for (const auto &fixture : m_patch.fixturesByFID(fid))
+        {
+            fixture->Resolve(values);
+        }
     }
+    // for (const auto &[fid, values] : m_frame.all())
+    // {
+    //     // if (auto fixture = m_patch.getFixture(fid))
+    //     // {
+    //     fixs[fid]->Resolve(values);
+    //     // }
+    // }
 
     // 3. output: continuous full-frame send, as a real sACN source does.
     // Only

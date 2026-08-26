@@ -82,6 +82,8 @@ public:
         return m_fixtureByUID;
     }
 
+    std::vector<FixturePtr> fixturesByFID(uint16_t fid) const;
+
     const std::map<uint16_t, LightEngine::DMX::UniversePatch> &universes() const
     {
         return m_universes;

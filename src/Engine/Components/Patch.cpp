@@ -337,6 +337,20 @@ void Patch::clearDMXBuffers()
     }
 }
 
+std::vector<Patch::FixturePtr> Patch::fixturesByFID(uint16_t fid) const
+{
+    auto it = m_fixtureByFIDs.find(fid);
+    if (it == m_fixtureByFIDs.end())
+        return {};
+
+    std::vector<FixturePtr> ret;
+    ret.reserve(it->second.size());
+    for (auto uid : it->second)
+        if (auto f = getFixture(uid))
+            ret.push_back(*f);
+    return ret;
+}
+
 std::string Patch::toString() const
 {
     std::string ret = "Patch\n";
