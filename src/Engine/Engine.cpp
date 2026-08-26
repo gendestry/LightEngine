@@ -34,14 +34,6 @@ Engine::~Engine() = default; // here the command types are complete
 // }
 
 // ---- patching ----
-std::vector<uint16_t> Engine::patch(Fixtures::Fixture *fixtemplate,
-                                    uint16_t universe, uint16_t amount,
-                                    std::optional<uint32_t> start,
-                                    std::optional<uint16_t> startFID)
-{
-    return m_patch.patch(fixtemplate, universe, amount, start, startFID);
-}
-
 // std::vector<uint16_t>
 // Engine::patch(std::shared_ptr<Fixtures::FixtureTemplate> fixtureTemp, uint16_t universe,
 //               uint16_t amount, std::optional<uint32_t> start,

@@ -1,0 +1,680 @@
+@startuml LightEngineCleanup
+' Snapshot of the code as it stands on the `cleanup` branch, plus the pieces
+' that still have to be built.
+'   GREEN  = exists and works
+'   YELLOW = exists but incomplete / stubbed / partly commented out
+'   RED    = does not exist yet
+'   BLUE   = existing class that needs a specific change (noted in the class)
+
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam nodesep 30
+skinparam ranksep 45
+hide empty members
+
+skinparam class {
+  BackgroundColor<<done>>    #B6E7B0
+  BorderColor<<done>>        #2E7D32
+  BackgroundColor<<partial>> #FFE7A3
+  BorderColor<<partial>>     #F9A825
+  BackgroundColor<<todo>>    #F2B8B8
+  BorderColor<<todo>>        #C62828
+  BackgroundColor<<change>>  #BBDEFB
+  BorderColor<<change>>      #1565C0
+}
+
+legend top left
+  <back:#B6E7B0>  implemented  </back>  <back:#FFE7A3>  partial / stubbed  </back>  <back:#F2B8B8>  to be added  </back>  <back:#BBDEFB>  needs change  </back>
+endlegend
+
+' ============================================================
+' GDTF / definition layer
+' ============================================================
+package "GDTF (definition)" #F4F9FF {
+
+  enum Attribute <<partial>> {
+    DIMMER
+    COLOR_R / _G / _B
+    PAN / TILT / ...
+    --
+    simplified enum, not full GDTF
+  }
+
+  class DMXChannel <<done>> {
+    address : uint16
+    res : Resolution
+    MaxDMX()
+  }
+
+  class LogicalChannel <<done>> {
+    attribute : Attribute
+    channel : DMXChannel
+    functions
+  }
+
+  class Ranges <<done>> {
+    from / to
+  }
+
+  class FixtureType <<todo>> {
+    name, manufacturer
+    dmxModes
+    --
+    real GDTF import
+  }
+
+  class DMXMode <<todo>> {
+    name
+    footprint
+  }
+
+  LogicalChannel *-- DMXChannel
+  LogicalChannel --> Attribute
+  LogicalChannel *-- Ranges
+  FixtureType *-- DMXMode
+  DMXMode ..> LogicalChannel
+}
+
+' ============================================================
+' Fixture layer
+' ============================================================
+package "Fixture" #F7F4FF {
+
+  class FixtureTemplate <<done>> {
+    name : string
+    parameters : vector<ParameterConfig>
+  }
+
+  class ParameterConfig <<done>> {
+    definition : LogicalChannel
+    cellIndex : uint16
+  }
+
+  class Parameter <<done>> {
+    definition
+    write(value)
+  }
+
+  class ColorCell <<done>> {
+    r / g / b emitters
+    virtual dimmer
+    setHSV()
+  }
+
+  class Fixture <<done>> {
+    m_config : FixtureTemplate
+    m_fid : uint16
+    m_buffer : uint8_t*  (non-owning)
+    m_parameters
+    m_byAttribute
+    m_colorCells
+    --
+    setStart() / setBuffer() / Bind()
+    Resolve(FixtureValues)
+    Fid() / SetFid()
+  }
+
+  class FixtureBuilder <<partial>> {
+    fluent construction
+  }
+
+  class ParameterBuilder <<done>> {
+    ParameterCell
+    operator<<(Attribute)
+  }
+
+  FixtureTemplate *-- ParameterConfig
+  ParameterConfig --> LogicalChannel
+  Fixture *-- Parameter
+  Fixture *-- ColorCell
+  Fixture --> FixtureTemplate
+  FixtureBuilder ..> Fixture
+  ParameterBuilder ..> ParameterConfig
+}
+
+' ============================================================
+' DMX / patch layer
+' ============================================================
+package "DMX" #FFF9F0 {
+
+  class PatchInfo <<change>> {
+    start : uint32
+    size : uint32
+    id : uint32
+    --
+    FIX: copy ctor drops `id`
+  }
+
+  class UniversePatch <<done>> {
+    m_id : uint16
+    m_buffer : array<uint8,512>
+    m_bytesPatched : array<uint16,512>
+    m_fragments : list<PatchInfo>
+    --
+    add() / addMultiple() / remove()
+    checkMultiple() / getInfo()
+    getRaw() / clearBuffer()
+    dump()
+  }
+
+  class FixtureGroup <<partial>> {
+    m_fixtures
+    m_byAttribute
+    --
+    largely superseded by Interval
+  }
+
+  UniversePatch *-- PatchInfo
+}
+
+' ============================================================
+' Engine components
+' ============================================================
+package "Engine :: Components" #F0FFF4 {
+
+  class FixtureLibrary <<partial>> {
+    vendor.fixtures : map<string, Fixture>
+    --
+    find(name)
+    addDefaults()  ' hardcoded RGB only
+    __TODO: load from GDTF__
+  }
+
+  class Patch <<change>> {
+    m_fixtureByUID : map<uid, FixturePtr>
+    m_fixtureStatus : map<uid, FixtureStatus>
+    m_fixtureByFIDs : map<fid, vector<uid>>
+    m_universes : map<uni, UniversePatch>
+    --
+    addFixtures() / removeFixture()
+    patch(uid,uni,addr)
+    patch(vector<uid>,uni,addr)
+    patch(template,uni,amount,start,startFID)
+    unpatch(uid) / unpatch(vector)
+    isPatched() / patchInfo()
+    sortedByAddress()
+    --
+    __m_fixtureByFIDs is never populated__
+  }
+
+  class FixtureStatus <<done>> {
+    universe : uint16
+    patchInfoID : uint32
+  }
+
+  class FixPatch <<done>> {
+    universe : uint16
+    info : PatchInfo
+  }
+
+  class Programmer <<change>> {
+    m_runningEffects : EffectGroup
+    m_interval : Interval
+    --
+    select() / add()
+    setColor() / setIntensity()
+    addDimmerChase()
+    apply(Frame, TimeContext)
+    --
+    __statics stack instead of replacing__
+    __no handle to edit running effects__
+    __toString() is an empty stub__
+  }
+
+  class FixtureSelection <<partial>> {
+    m_interval : Interval
+    --
+    duplicate of Programmer's own
+    selection code
+  }
+
+  class Presets <<partial>> {
+    m_groups : Pool<Group>
+    m_colors : Pool<Color>
+    --
+    dimmer / sequence / effect
+    pools still commented out
+  }
+
+  Patch *-- UniversePatch
+  Patch *-- FixtureStatus
+  Patch ..> FixPatch
+  Patch o-- Fixture
+  FixtureLibrary o-- Fixture
+}
+
+' ============================================================
+' Pools
+' ============================================================
+package "Engine :: Pools" #F0F4FF {
+
+  class PoolObject <<done>> {
+    m_number : uint32
+    m_name : string
+    toString()
+  }
+
+  class "Pool<T>" as PoolT <<done>> {
+    m_items : map<uint32, T>
+    m_byName : map<string, uint32>
+    --
+    store() / emplace() / emplaceAt()
+    get(num) / get(name)
+    remove() / move() / rename()
+    nextFree()
+  }
+
+  class Group <<done>> {
+    m_group : Interval
+    fids()
+  }
+
+  class Color <<change>> {
+    m_effect : StaticColor
+    --
+    __no effect() accessor__
+    __toString() hides the colour__
+  }
+
+  class DimmerPreset <<todo>> {
+    m_effect : StaticIntensity
+  }
+
+  class PositionPreset <<todo>> {
+    m_effect : StaticPosition
+  }
+
+  class "PresetObject<EffectT>" as PresetT <<todo>> {
+    generic preset wrapper
+    replaces Color/Dimmer/...
+  }
+
+  class Sequence <<todo>> {
+    cues : vector<Cue>
+    go() / back()
+  }
+
+  class Cue <<todo>> {
+    fadeTime
+    values / effects
+  }
+
+  class EffectPoolObject <<todo>> {
+    stored animated effect
+  }
+
+  PoolObject <|-- Group
+  PoolObject <|-- Color
+  PoolObject <|-- DimmerPreset
+  PoolObject <|-- PositionPreset
+  PoolObject <|-- PresetT
+  PoolObject <|-- Sequence
+  PoolObject <|-- EffectPoolObject
+  PoolT o-- PoolObject
+  Sequence *-- Cue
+  Presets *-- PoolT
+}
+
+' ============================================================
+' Layers / frame
+' ============================================================
+package "Engine :: Layers" #FFF0F8 {
+
+  enum MergePolicy <<done>> {
+    HTP
+    LTP
+  }
+
+  class FixtureValues <<change>> {
+    color : optional<HSV>
+    intensity : optional<float>
+    generic : map<Attribute, float>
+    --
+    __make fully attribute-generic__
+  }
+
+  class Frame <<done>> {
+    m_values : map<fid, FixtureValues>
+    --
+    contribute(fid, values, policy)
+    get(fid) / all() / clear()
+  }
+
+  abstract class Layer <<partial>> {
+    m_priority : Priority
+    apply(Frame, TimeContext)
+    --
+    defined but nothing is
+    registered through it yet
+  }
+
+  enum Priority <<done>> {
+    ABOVE_PROG / PROG
+    HIGH / NORMAL / LOW
+  }
+
+  class PlaybackLayer <<todo>> {
+    sequence : Sequence
+    fade / go
+  }
+
+  Frame *-- FixtureValues
+  Frame ..> MergePolicy
+  Layer --> Priority
+  Layer <|-- PlaybackLayer
+}
+
+' ============================================================
+' Effects
+' ============================================================
+package "Effects" #FFFDF0 {
+
+  abstract class EffectBase <<done>> {
+    m_cache : vector<pair<fid, FixtureValues>>
+    m_policy : MergePolicy
+    m_dirty : bool
+    m_nextDue / m_phaseOrigin
+    --
+    {abstract} recompute(t, group)
+    due() / evaluate() / replay()
+    markDirty() / syncPhase()
+    stepInterval() / scheduleNext()
+    setEnabled()
+  }
+
+  abstract class EffectStatic <<done>> {
+    setCache(vals)
+    stepInterval() = NEVER
+  }
+
+  abstract class EffectAnimated <<done>> {
+    m_curve / m_bpm
+    m_spread / m_steps
+    --
+    setBpm(bpm, now)
+    setSpread() / setSteps()
+    stepInterval()
+  }
+
+  class StaticColor <<change>> {
+    m_color : RGB
+    setColor()
+    --
+    __no color() getter__
+  }
+
+  class StaticIntensity <<done>> {
+    m_level : float
+    setLevel()
+  }
+
+  class DimmerChase <<done>> {
+    m_type : Curve::Type
+    setCurve()
+    recompute(): temporal + spatial phase
+  }
+
+  class EffectWrapper <<change>> {
+    group : Interval
+    effect : EffectBase
+    --
+    __needs a stable id__
+  }
+
+  class EffectGroup <<change>> {
+    applied : vector<EffectWrapper>
+    push() / pushRet()
+    lastEffect() / operator[]
+    apply(Frame, TimeContext)
+    --
+    __no find(id) / erase(id)__
+  }
+
+  class "Effects::Engine" as FxEngine <<todo>> {
+    m_effects : vector<EffectGroup>
+    --
+    empty shell
+  }
+
+  ' ---- effects still to write ----
+  class AttributeChase <<todo>> {
+    attr : Attribute
+    one generic chase replacing
+    Dimmer/Color/Position variants
+  }
+
+  class ColorRainbow <<todo>> {
+    hue sweep over selection
+  }
+
+  class Strobe <<todo>> {
+    quantised on/off
+  }
+
+  class PositionEffect <<todo>> {
+    circle / figure-8 pan+tilt
+  }
+
+  class SpatialOrdering <<todo>> {
+    forward / reverse
+    in-out / symmetric
+    blocks / wings / random
+    --
+    transforms the spatial index
+    shared by every animated effect
+  }
+
+  class EffectAmplitude <<todo>> {
+    low / high / size clamps
+  }
+
+  EffectBase <|-- EffectStatic
+  EffectBase <|-- EffectAnimated
+  EffectStatic <|-- StaticColor
+  EffectStatic <|-- StaticIntensity
+  EffectAnimated <|-- DimmerChase
+  EffectAnimated <|-- AttributeChase
+  EffectAnimated <|-- ColorRainbow
+  EffectAnimated <|-- Strobe
+  EffectAnimated <|-- PositionEffect
+  EffectAnimated ..> SpatialOrdering
+  EffectAnimated ..> EffectAmplitude
+  EffectWrapper *-- EffectBase
+  EffectGroup *-- EffectWrapper
+  EffectGroup --|> Layer
+  FxEngine o-- EffectGroup
+  EffectBase ..> Frame : replay()
+  EffectBase *-- FixtureValues
+}
+
+' ============================================================
+' Output
+' ============================================================
+package "Output" #F0FFFF {
+
+  class DMXOutput <<partial>> {
+    m_ip : IP
+    m_sourceName : string
+    --
+    sendAll(Patch)
+    sACN transmit
+  }
+
+  class ArtNetOutput <<todo>> {
+    alternative protocol
+  }
+
+  DMXOutput ..> Patch
+}
+
+' ============================================================
+' Commands / UI
+' ============================================================
+package "Commands / UI" #FFF0F0 {
+
+  class CommandParser <<partial>> {
+    forward-declared in Engine
+    lives in lib/NewSyntaxParser
+  }
+
+  class CommandExecutor <<partial>> {
+    forward-declared in Engine
+  }
+
+  class ConsoleUI <<todo>> {
+    patch view
+    fixture sheet
+    effect editor
+    pool grids
+  }
+
+  CommandParser ..> CommandExecutor
+  CommandExecutor ..> Engine
+  ConsoleUI ..> Engine
+}
+
+' ============================================================
+' Top level
+' ============================================================
+package "Engine (top level)" #F8F8F8 {
+
+  class Config <<done>> {
+    output : bool
+    ...
+  }
+
+  class Engine <<change>> {
+    m_config : Config
+    m_library : FixtureLibrary
+    m_patch : Patch
+    m_programmer : Programmer
+    m_presets : Presets
+    m_output : DMXOutput
+    m_frame : Frame
+    m_layers : vector<Layer*>
+    m_time : TimeContext
+    --
+    patch(...)
+    storeGroup()
+    update(dt)
+    addLayer()
+    --
+    __update() mixes FID and UID__
+    __-> null deref (see note)__
+    __store/recall presets commented out__
+  }
+
+  Engine *-- Config
+  Engine *-- FixtureLibrary
+  Engine *-- Patch
+  Engine *-- Programmer
+  Engine *-- Presets
+  Engine *-- DMXOutput
+  Engine *-- Frame
+  Engine o-- Layer
+  Programmer *-- EffectGroup
+  Programmer ..> Layer : should be one\n(currently only Stringify)
+}
+
+' ============================================================
+' Utils (external lib)
+' ============================================================
+package "Utils (lib)" #FAFAFA {
+
+  class Interval <<done>> {
+    m_cache : vector<uint64>
+    add() / operator|=
+    values() / size()
+    --
+    __no revision() -> stale
+    effect caches on regroup__
+  }
+
+  class Logger <<change>> {
+    scope / level
+    debug/info/warn/error/success
+    --
+    __no compile-time format check__
+    __error()/success() ignore level__
+    __no per-scope mute, no sinks__
+    __not thread-safe__
+  }
+
+  class TimeContext <<done>> {
+    now : double
+    dt : float
+  }
+
+  class Curve <<done>> {
+    samples
+    getCurveByType()
+  }
+
+  class "Colors (RGB/HSV)" as Colors <<done>> {
+    rgbToHsv() / hsvToRgb()
+  }
+
+  class Fragment <<done>> {
+    start / size
+  }
+
+  class ColorFormatter <<done>> {
+    format() / group()
+    Theme::num/name/lbl/...
+  }
+}
+
+Fixture --|> Fragment
+EffectBase ..> Interval
+EffectBase ..> TimeContext
+EffectAnimated *-- Curve
+Programmer *-- Interval
+Group *-- Interval
+StaticColor ..> Colors
+ColorCell ..> Colors
+
+' ============================================================
+' Known defects worth carrying on the diagram
+' ============================================================
+note as N1 #FFCDD2
+  **BLOCKER - FID / UID mix-up**
+  Engine::update() does
+  ""fixs[fid]->Resolve(values)""
+  but ""fixs"" is keyed by UID while
+  ""Frame"" is keyed by FID.
+  With startFID != startUID this
+  default-inserts a null shared_ptr
+  and segfaults.
+  Fix: populate m_fixtureByFIDs and
+  look fixtures up by FID.
+end note
+N1 .. Engine
+
+note as N2 #FFE0B2
+  **Effect editing needs addressing**
+  EffectWrapper has no id, so nothing
+  can reach setBpm()/setCurve() on a
+  running effect. Programmer throws the
+  pushRet() handle away.
+end note
+N2 .. EffectGroup
+
+note as N3 #FFE0B2
+  **Static edits are not idempotent**
+  Programmer::setColor() pushes a NEW
+  StaticColor every call instead of
+  updating the existing one for that
+  (selection, category).
+end note
+N3 .. Programmer
+
+note as N4 #FFE0B2
+  **Missing repatch path**
+  Changing a fixture's universe must go
+  through patch() so setBuffer() is
+  re-pointed; setStart() alone leaves it
+  writing into the old universe buffer.
+end note
+N4 .. Patch
+
+@enduml

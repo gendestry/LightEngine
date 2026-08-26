@@ -55,11 +55,6 @@ public:
     Engine();
     ~Engine(); // out-of-line: m_parser/m_exec are incomplete types here
 
-    std::vector<uint16_t>
-    patch(Fixtures::Fixture *fix, uint16_t universe, uint16_t amount,
-          std::optional<uint32_t> start = std::nullopt,
-          std::optional<uint16_t> startFID = std::nullopt);
-
     // // Select a stored group into the programmer (replace).
     // void selectGroup(uint32_t num);
     // void appendGroup(uint32_t num);

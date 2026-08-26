@@ -1,0 +1,818 @@
+@startuml ConsoleReferenceArchitecture
+' ============================================================================
+' Reference architecture of a professional lighting console.
+'
+' Synthesised from the PUBLIC behaviour and documentation of grandMA3 and
+' MagicQ (manuals, GDTF/MVR specs, protocol specs) - NOT from either vendor's
+' source. Names follow MA3 where the two differ, with the MagicQ term in
+' <<stereotype>> or in a note.
+'
+' Purpose: a target to compare LightEngine against. See the mapping notes at
+' the bottom for what already exists in this project.
+' ============================================================================
+
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam nodesep 25
+skinparam ranksep 40
+skinparam wrapWidth 260
+hide empty members
+
+skinparam class {
+  BackgroundColor<<def>>    #E3F2FD
+  BorderColor<<def>>        #1565C0
+  BackgroundColor<<patch>>  #FFF8E1
+  BorderColor<<patch>>      #F9A825
+  BackgroundColor<<show>>   #F3E5F5
+  BorderColor<<show>>       #6A1B9A
+  BackgroundColor<<prog>>   #E8F5E9
+  BorderColor<<prog>>       #2E7D32
+  BackgroundColor<<play>>   #FFEBEE
+  BorderColor<<play>>       #C62828
+  BackgroundColor<<out>>    #E0F7FA
+  BorderColor<<out>>        #00838F
+  BackgroundColor<<infra>>  #ECEFF1
+  BorderColor<<infra>>      #455A64
+}
+
+legend top left
+  <back:#E3F2FD> definition </back> <back:#FFF8E1> patch </back> <back:#F3E5F5> show data </back>
+  <back:#E8F5E9> programmer </back> <back:#FFEBEE> playback </back> <back:#E0F7FA> output </back> <back:#ECEFF1> infrastructure </back>
+endlegend
+
+' ============================================================================
+' 1. DEFINITION - what a fixture IS (GDTF)
+' ============================================================================
+package "1. Fixture Definition (GDTF / .hed)" as PDEF {
+
+  class FixtureType <<def>> {
+    name, shortName
+    manufacturer
+    fixtureTypeID : GUID
+    revision
+    thumbnail
+  }
+
+  class AttributeDefinitions <<def>> {
+    activationGroups
+    featureGroups
+    attributes
+  }
+
+  class FeatureGroup <<def>> {
+    name : Dimmer | Position | Gobo
+    Color | Beam | Focus | Control
+    Shapers | Video
+    --
+    the tabs on the encoder bar
+  }
+
+  class Feature <<def>> {
+    name : PanTilt, RGB, Gobo1
+    --
+    one encoder page within a group
+  }
+
+  class Attribute <<def>> {
+    name : Dimmer, Pan, Tilt,
+      ColorAdd_R, Gobo1, Zoom, ...
+    feature : Feature
+    mainAttribute : Attribute
+    physicalUnit
+    colorSpace / color
+    --
+    ~400 standardised names
+  }
+
+  class ActivationGroup <<def>> {
+    attributes that activate
+    together (e.g. Pan+Tilt)
+  }
+
+  class Wheel <<def>> {
+    name
+    slots : WheelSlot
+  }
+
+  class WheelSlot <<def>> {
+    name, color
+    mediaFile (gobo image)
+  }
+
+  class PhysicalDescriptions <<def>> {
+    emitters / filters
+    colorSpace
+    DMXProfiles
+    CRIs
+    properties (legHeight, weight)
+  }
+
+  class Emitter <<def>> {
+    name
+    spectrum
+    dominantWaveLength
+  }
+
+  class Geometry <<def>> {
+    name
+    type : Axis | Beam | Normal
+      MediaServerLayer | Display
+    position : Matrix4
+    children
+  }
+
+  class GeometryReference <<def>> {
+    references a Geometry
+    dmxOffset per break
+    --
+    THE mechanism for
+    multi-cell / pixel fixtures
+  }
+
+  class DMXMode <<def>> {
+    name : "Standard 16ch"
+    footprint
+    geometry : Geometry
+    channels
+    relations
+  }
+
+  class DMXChannel <<def>> {
+    dmxBreak
+    offset : coarse, fine, ultra
+    initialFunction
+    highlight
+    geometry
+  }
+
+  class LogicalChannel <<def>> {
+    attribute : Attribute
+    snap : bool
+    master : None|Grand|Group
+    mibFade / dmxChangeTimeLimit
+  }
+
+  class ChannelFunction <<def>> {
+    name
+    attribute
+    dmxFrom .. dmxTo
+    physicalFrom .. physicalTo
+    realFade / realAcceleration
+    wheel / emitter / filter
+    modeMaster (conditional)
+  }
+
+  class ChannelSet <<def>> {
+    name : "Open", "Gobo 3"
+    dmxFrom .. dmxTo
+    physicalFrom .. physicalTo
+    --
+    the named slots a user picks
+  }
+
+  class DMXRelation <<def>> {
+    master / follower channel
+    type : Multiply | Override
+  }
+
+  class Macro_GDTF <<def>> {
+    fixture-side macro
+    (lamp on, reset, calibrate)
+  }
+
+  FixtureType *-- AttributeDefinitions
+  FixtureType *-- PhysicalDescriptions
+  FixtureType *-- Geometry
+  FixtureType *-- DMXMode
+  FixtureType *-- Wheel
+  FixtureType *-- Macro_GDTF
+  AttributeDefinitions *-- FeatureGroup
+  AttributeDefinitions *-- ActivationGroup
+  FeatureGroup *-- Feature
+  Feature *-- Attribute
+  Attribute --> ActivationGroup
+  Wheel *-- WheelSlot
+  PhysicalDescriptions *-- Emitter
+  Geometry *-- GeometryReference
+  DMXMode *-- DMXChannel
+  DMXMode *-- DMXRelation
+  DMXChannel *-- LogicalChannel
+  LogicalChannel *-- ChannelFunction
+  ChannelFunction *-- ChannelSet
+  ChannelFunction --> WheelSlot
+  ChannelFunction --> Emitter
+  LogicalChannel --> Attribute
+}
+
+' ============================================================================
+' 2. PATCH - what is in the rig
+' ============================================================================
+package "2. Patch / Rig" as PPATCH {
+
+  class Patch <<patch>> {
+    fixtures
+    universes / breaks
+    --
+    patch() / unpatch()
+    repatch() / renumber()
+    checkOverlap()
+    importMVR()
+  }
+
+  class Fixture <<patch>> {
+    fixtureId : FID      (user-facing)
+    cid : uint           (internal, unique)
+    name
+    fixtureType + dmxMode
+    address : break + channel
+    subfixtures / cells
+    position : Matrix4 (from MVR)
+    layer / class
+    --
+    MagicQ: "head"
+  }
+
+  class SubFixture <<patch>> {
+    cell / pixel index
+    own attribute set
+    --
+    from GeometryReference
+    MA3: subfixture
+    MagicQ: head cell
+  }
+
+  class DMXAddress <<patch>> {
+    universe : uint16
+    channel  : 1..512
+    break    : uint
+  }
+
+  class Universe <<patch>> {
+    number
+    512 byte buffer
+    priority (sACN)
+    --
+    one DMX512 frame
+  }
+
+  class DMXPort <<patch>> {
+    protocol : sACN|ArtNet|MANet
+      |sACN-in|DMX-XLR|Local
+    universe mapping
+    destination / interface
+  }
+
+  class MVRScene <<patch>> {
+    3D positions
+    layers
+    fixture instances
+    --
+    interchange with CAD / viz
+  }
+
+  Patch *-- Fixture
+  Fixture *-- SubFixture
+  Fixture *-- DMXAddress
+  Fixture --> FixtureType
+  Fixture --> DMXMode
+  Patch *-- Universe
+  Universe --> DMXPort
+  Patch <.. MVRScene
+}
+
+' ============================================================================
+' 3. SHOW DATA - the numbered objects the user builds
+' ============================================================================
+package "3. Show Data (pools)" as PSHOW {
+
+  class "Pool<T>" as PoolT <<show>> {
+    numbered slots
+    name index
+    store / copy / move / delete
+    labels, appearances
+    --
+    every object type is pooled
+  }
+
+  class DataPool <<show>> {
+    MA3: a whole set of pools
+    (groups, presets, sequences)
+    swappable per user/show part
+  }
+
+  class Group <<show>> {
+    ordered fixture selection
+    --
+    order matters: it drives
+    effect/fan spatial index
+  }
+
+  class World <<show>> {
+    attribute + fixture mask
+    --
+    "only Position of the spots"
+    MagicQ: mask / filter
+  }
+
+  class Filter <<show>> {
+    which attributes a store or
+    playback is allowed to touch
+  }
+
+  class Preset <<show>> {
+    featureGroup : Dimmer|Position
+      |Gobo|Color|Beam|Focus|...
+    mode : Universal | Global
+      | Selective
+    values per fixture (or generic)
+    embedded phasers
+    --
+    MagicQ: palette
+  }
+
+  class Sequence <<show>> {
+    cues (ordered, fractional nums)
+    tracking on/off
+    default timing
+    off/release behaviour
+    --
+    MagicQ: cue stack
+  }
+
+  class Cue <<show>> {
+    number : 1, 1.5, 2
+    name
+    parts
+    trigger : Go|Follow|Time|Sound
+      |Timecode
+    fade / delay / in / out
+    command (macro on cue)
+  }
+
+  class CuePart <<show>> {
+    part number
+    own fade/delay
+    subset of values
+  }
+
+  class CueValue <<show>> {
+    fixture + attribute -> value
+    OR preset reference
+    tracking state : Value|Tracked
+      |Block|Assert|Release
+    individual timing
+    --
+    reference beats value:
+    edit the preset, cue follows
+  }
+
+  class Recipe <<show>> {
+    MA3: group + preset + phaser
+    resolved at runtime
+    --
+    a cue built from rules,
+    not baked values
+  }
+
+  class Phaser <<show>> {
+    MA3: the effect object
+    steps with phase/width
+    attribute layers
+    grouping / wings
+    --
+    MagicQ: FX
+  }
+
+  class EffectTemplate <<show>> {
+    reusable waveform + params
+    (sine, saw, circle, fly-out)
+  }
+
+  class Macro <<show>> {
+    ordered command lines
+    wait / condition
+  }
+
+  class Layout <<show>> {
+    2D arrangement of fixtures
+    and pool objects
+  }
+
+  class View <<show>> {
+    screen configuration
+    (which windows, where)
+  }
+
+  class Page <<show>> {
+    executor assignment set
+    --
+    MagicQ: playback page
+  }
+
+  class Timecode <<show>> {
+    recorded events vs SMPTE/MIDI
+    tracks -> executor commands
+  }
+
+  class Appearance <<show>> {
+    colour + icon for pool objects
+  }
+
+  class UserProfile <<show>> {
+    rights, keyboard, defaults
+  }
+
+  PoolT o-- Group
+  PoolT o-- Preset
+  PoolT o-- Sequence
+  PoolT o-- World
+  PoolT o-- Macro
+  PoolT o-- Layout
+  PoolT o-- Page
+  PoolT o-- Phaser
+  PoolT o-- Appearance
+  DataPool *-- PoolT
+  Sequence *-- Cue
+  Cue *-- CuePart
+  CuePart *-- CueValue
+  Cue *-- Recipe
+  CueValue ..> Preset : may reference
+  Recipe --> Group
+  Recipe --> Preset
+  Recipe --> Phaser
+  Preset ..> Phaser : may embed
+  Phaser --> EffectTemplate
+  Group --> Fixture
+  World --> Attribute
+}
+
+' ============================================================================
+' 4. PROGRAMMER - the live editing layer
+' ============================================================================
+package "4. Programmer" as PPROG {
+
+  class Programmer <<prog>> {
+    selection : ordered fixtures
+    values (active / inactive)
+    layers: Value|Timing|Phaser
+    blind / preview mode
+    highlight / lowlight / solo
+    --
+    clearAll() staged:
+    values -> selection -> off
+  }
+
+  class Selection <<prog>> {
+    ordered fixture list
+    selection order drives fan
+    subfixture selection
+    --
+    "next/prev/set/all"
+  }
+
+  class ProgrammerValue <<prog>> {
+    fixture + attribute
+    value (absolute or relative)
+    state : Active | Inactive
+    source : Manual|Preset|Effect
+    preset reference (if any)
+    individual fade/delay
+  }
+
+  class MAtricks <<prog>> {
+    interleave / blocks / groups
+    wings / shuffle / mirror
+    x/y grid ordering
+    --
+    MagicQ: fan curves + groups
+    reorders the spatial index
+  }
+
+  class Fan <<prog>> {
+    spread a value across the
+    selection: linear, symmetric,
+    curved, from centre/ends
+  }
+
+  class EncoderBar <<prog>> {
+    current FeatureGroup + Feature
+    maps encoders to attributes
+    --
+    driven by AttributeDefinitions
+  }
+
+  Programmer *-- Selection
+  Programmer *-- ProgrammerValue
+  Programmer *-- MAtricks
+  Programmer --> Fan
+  Programmer --> EncoderBar
+  Selection --> Fixture
+  ProgrammerValue ..> Preset
+  ProgrammerValue ..> Phaser
+}
+
+' ============================================================================
+' 5. PLAYBACK - running the show
+' ============================================================================
+package "5. Playback / Execution" as PPLAY {
+
+  class Executor <<play>> {
+    fader + buttons
+    assigned object (Sequence,
+      Group, Preset, Macro...)
+    priority
+    fader function : Master|XFade
+      |Rate|Speed|Temp
+    off behaviour
+    --
+    MagicQ: playback
+  }
+
+  class CueEngine <<play>> {
+    currentCue / nextCue
+    go / goBack / goto / pause
+    load / release / off
+    assert / restart mode
+    --
+    the tracking state machine
+  }
+
+  class TrackingEngine <<play>> {
+    computes each cue's OUTPUT
+    from cue values + everything
+    tracked in from earlier cues
+    block / assert / release
+    tracking-forward on edit
+  }
+
+  class Crossfade <<play>> {
+    per-cue fade/delay
+    in/out asymmetry
+    per-attribute timing
+    individual (per fixture) time
+    fade curves
+    snap attributes jump
+  }
+
+  class Chase <<play>> {
+    sequence in chase mode
+    rate / speed master
+    direction, mode (bounce...)
+  }
+
+  class Master <<play>> {
+    Grand Master
+    group / feature masters
+    speed masters (phaser rate)
+    rate masters (cue time)
+    highlight / solo
+  }
+
+  class PlaybackPriority <<play>> {
+    per-executor priority
+    HTP / LTP per attribute
+    swap vs pile-on
+    --
+    decides who wins in the stack
+  }
+
+  Executor *-- CueEngine
+  Executor --> PlaybackPriority
+  CueEngine *-- TrackingEngine
+  CueEngine *-- Crossfade
+  CueEngine --> Sequence
+  Executor --> Chase
+  Executor --> Master
+  Page o-- Executor
+}
+
+' ============================================================================
+' 6. OUTPUT ENGINE - compositing to DMX
+' ============================================================================
+package "6. Output Engine" as POUT {
+
+  class ValueStack <<out>> {
+    per fixture + attribute:
+    the ordered list of sources
+    contributing this frame
+    --
+    default -> playbacks (by
+    priority) -> programmer
+  }
+
+  class Compositor <<out>> {
+    merges every source into
+    one value per attribute
+    HTP for dimmer,
+    LTP for everything else
+    applies masters
+    --
+    runs every output tick
+  }
+
+  class AttributeOwnership <<out>> {
+    which source owns each
+    attribute right now
+    --
+    required for release,
+    solo and "what is active"
+  }
+
+  class ParkedValues <<out>> {
+    fixture/channel forced to a
+    value, bypassing the stack
+  }
+
+  class DMXRenderer <<out>> {
+    physical -> DMX conversion
+    channel functions + ranges
+    coarse/fine/ultra split
+    snap vs fade
+    DMX profiles / curves
+  }
+
+  class UniverseBuffer <<out>> {
+    512 bytes per universe
+    double buffered
+  }
+
+  class OutputScheduler <<out>> {
+    fixed-rate DMX thread
+    (typically 25-44 Hz)
+    decoupled from UI/render
+    per-protocol timing
+  }
+
+  class ProtocolSender <<out>> {
+    sACN / ArtNet / MA-Net
+    Art-Net sync, sACN priority
+    per-universe destinations
+  }
+
+  class DMXInput <<out>> {
+    incoming DMX/sACN
+    merge or trigger
+  }
+
+  ValueStack --> Compositor
+  Compositor *-- AttributeOwnership
+  Compositor --> ParkedValues
+  Compositor --> DMXRenderer
+  DMXRenderer --> UniverseBuffer
+  UniverseBuffer --> OutputScheduler
+  OutputScheduler --> ProtocolSender
+  ProtocolSender --> DMXPort
+  DMXRenderer ..> ChannelFunction : range lookup
+  Programmer --> ValueStack
+  Executor --> ValueStack
+  Master --> Compositor
+}
+
+' ============================================================================
+' 7. INFRASTRUCTURE
+' ============================================================================
+package "7. Infrastructure" as PINFRA {
+
+  class CommandLine <<infra>> {
+    keyword grammar:
+    <verb> <object> <number>
+    "Store Cue 3 Sequence 1"
+    --
+    EVERY UI action is a command
+  }
+
+  class CommandExecutor <<infra>> {
+    resolves object references
+    executes, returns result
+    feeds undo stack
+  }
+
+  class UndoStack <<infra>> {
+    MA3: Oops
+    grouped transactions
+    --
+    only works if all mutation
+    goes through commands
+  }
+
+  class ShowFile <<infra>> {
+    serialise every pool object
+    versioned, migratable
+    autosave
+    --
+    needs generic object
+    reflection to stay sane
+  }
+
+  class Session <<infra>> {
+    multi-console networking
+    master / tracking backup
+    parameter sharing
+    session state sync
+  }
+
+  class RemoteControl <<infra>> {
+    OSC / MIDI / MIDI show control
+    Timecode (LTC, MTC, ArtNet)
+    DMX remote, GPIO
+    web remote
+  }
+
+  class PluginHost <<infra>> {
+    Lua (MA3) / scripting
+    access to object model
+  }
+
+  class Visualizer <<infra>> {
+    MA3D / Capture / WYSIWYG
+    over MVR + DMX stream
+  }
+
+  class RealtimeCore <<infra>> {
+    UI thread
+    render/compositor thread
+    DMX output thread(s)
+    network thread
+    --
+    lock-free handoff of
+    universe buffers
+  }
+
+  CommandLine --> CommandExecutor
+  CommandExecutor --> UndoStack
+  CommandExecutor ..> PSHOW
+  CommandExecutor ..> PPROG
+  CommandExecutor ..> PPLAY
+  ShowFile ..> PSHOW
+  ShowFile ..> PPATCH
+  Session ..> RealtimeCore
+  RemoteControl --> CommandExecutor
+  PluginHost --> CommandExecutor
+  Visualizer <.. ProtocolSender
+  Visualizer <.. MVRScene
+}
+
+' ============================================================================
+' Cross-package flow
+' ============================================================================
+PDEF -[hidden]-> PPATCH
+PPATCH -[hidden]-> PSHOW
+PSHOW -[hidden]-> PPROG
+PPROG -[hidden]-> PPLAY
+PPLAY -[hidden]-> POUT
+
+note as NFLOW #FFFDE7
+  **The output pipeline, every tick**
+  1. Executors evaluate their current cue
+     (tracking engine + crossfade + phasers)
+  2. Programmer evaluates on top (highest priority)
+  3. Compositor merges the ValueStack per attribute
+     (HTP dimmer / LTP rest, masters applied)
+  4. DMXRenderer converts physical -> DMX via
+     ChannelFunction ranges, splits coarse/fine
+  5. OutputScheduler ships universes on its own
+     fixed-rate thread
+end note
+NFLOW .. POUT
+
+note as NTRACK #FFEBEE
+  **Tracking is the hard part**
+  A cue stores only what CHANGED. The output of
+  cue N is the accumulation of cues 1..N unless
+  a Block or a new value interrupts it.
+  Editing cue 3 must track forward through 4,5,6...
+  Release/Off must revert only the attributes that
+  source owned - hence AttributeOwnership.
+end note
+NTRACK .. TrackingEngine
+
+note as NREF #E8F5E9
+  **References, not copies**
+  Cues store preset REFERENCES where possible.
+  Change "Preset Color 5" and every cue using it
+  updates. Same for groups inside recipes.
+  This is why show data is a graph, not a tree,
+  and why deletion needs reference counting.
+end note
+NREF .. CueValue
+
+note as NMAP #ECEFF1
+  **LightEngine today, mapped onto this**
+  Have (some form of):
+    GDTF: DMXChannel, LogicalChannel, Ranges, Attribute(6)
+    Patch: Patch, UniversePatch, Fixture, FID/UID
+    Show: Pool<T>, PoolObject, Group, Color preset
+    Programmer: selection (Interval), static + animated effects
+    Output: Frame + MergePolicy (= ValueStack + Compositor),
+            ColorCell (= part of DMXRenderer), DMXOutput
+  Missing entirely:
+    FeatureGroup/Feature hierarchy, ChannelFunction/ChannelSet,
+    GeometryReference (multi-cell), MVR,
+    Sequence/Cue/CuePart/tracking, Executor/Page,
+    World/Filter, MAtricks/Fan, Recipe,
+    AttributeOwnership, ParkedValues,
+    ShowFile, UndoStack, Session, Timecode,
+    separate output thread
+end note
+
+@enduml

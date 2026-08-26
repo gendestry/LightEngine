@@ -16,18 +16,25 @@ int main()
     auto &lib = engine.fixtureLibrary();
     auto rgb = lib.find("RGB");
 
-    auto f1 = engine.patch(rgb, 1, 10);
-    auto f2 = engine.patch(rgb, 2, 10);
+    auto &patch = engine.patcher();
+
+    auto f1 = patch.patch(rgb, 1, 10, 0, 101);
+    auto f2 = patch.patch(rgb, 2, 10);
 
     auto &prog = engine.programmer();
-    prog.select(f1);
-    prog.setColor({255, 128, 0});
-    prog.addDimmerChase();
+    // prog.select(f1);
+    // prog.setColor({255, 128, 0});
+    // prog.addDimmerChase();
+    // engine.storeGroup();
 
-    prog.select(f2);
-    prog.setColor({255, 0, 207});
+    // prog.select(f2);
+    // prog.setColor({255, 0, 207});
+    // prog.setIntensity(0.8f);
+    // engine.storeGroup();
 
-    prog.setIntensity(0.8f);
+    prog.select({1, 2, 3, 4});
+    prog.add({8, 10, 13, 14, 15});
+
     // int i = 0;
     // for (auto [k, fix] : engine.patcher().fixs())
     // {
@@ -37,7 +44,16 @@ int main()
     //     fix->Resolve(v);
     // }
     engine.update();
-    std::cout << engine.patcher().toString();
+    engine.patcher().print();
+    engine.patcher().removeFixture(2);
+    engine.patcher().unpatch(4);
+    engine.patcher().unpatch(5);
+    engine.patcher().unpatch(6);
+    engine.patcher().patch(6, 2, 200);
+
+    engine.patcher().print();
+
+    // std::cout << engine.patcher().toString();
 
     return 0;
     /*
