@@ -31,9 +31,7 @@ namespace LightEngine::Fixtures
 class Fixture : public Utils::Fragment
 {
     std::shared_ptr<FixtureTemplate> m_config;
-    // std::string m_name = "fixture";
     uint16_t m_fid = 0;
-    std::optional<uint16_t> m_universe = std::nullopt;
     uint8_t *m_buffer = nullptr; // -> universe buffer (non-owning)
 
     std::vector<Parameter> m_parameters;
@@ -98,12 +96,6 @@ public:
     const std::string &Name() const { return m_config->name; }
     uint16_t Fid() const { return m_fid; }
     void SetFid(uint16_t fid) { m_fid = fid; }
-
-    std::optional<uint16_t> Universe() const { return m_universe; }
-    void SetUniverse(uint16_t universe) { m_universe = universe; }
-    void Unpatch() { m_universe = std::nullopt; }
-
-    bool isPatched() const { return m_universe.has_value(); }
 
     uint32_t Footprint() const { return size; }
 

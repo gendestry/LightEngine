@@ -12,15 +12,10 @@ LightEngine::DMX::UniversePatch &Patch::getUniverse(uint16_t universe)
     return it->second;
 }
 
-std::optional<Patch::FixturePtr> Patch::getFixture(uint32_t id) const
+Patch::FixturePtr Patch::getFixture(uint64_t uid) const
 {
-    auto fixIt = m_fixtureByUID.find(id);
-    if (fixIt != m_fixtureByUID.end())
-    {
-        return fixIt->second;
-    }
-
-    return std::nullopt;
+    auto fixIt = m_fixtureByUID.find(uid);
+    return fixIt != m_fixtureByUID.end() ? fixIt->second : nullptr;
 }
 
 std::optional<Patch::FixtureStatus> Patch::isPatched(uint32_t id) const
@@ -81,6 +76,18 @@ bool Patch::removeFixture(uint32_t id)
     {
         unpatch(id);
 
+        // drop it from the FID index, and drop the FID entirely once nothing carries it
+        auto fidIt = m_fixtureByFIDs.find(fixIt->second->Fid());
+        if (fidIt != m_fixtureByFIDs.end())
+        {
+            auto &uids = fidIt->second;
+            uids.erase(std::remove(uids.begin(), uids.end(), id), uids.end());
+            if (uids.empty())
+            {
+                m_fixtureByFIDs.erase(fidIt);
+            }
+        }
+
         m_fixtureByUID.erase(fixIt);
         logger.success("Fixture {} removed", id);
         return true;
@@ -126,13 +133,13 @@ bool Patch::patch(uint32_t fixUid, uint16_t universe, uint32_t addr)
         return false;
     }
     auto fix = getFixture(fixUid);
-    if (!fix.has_value())
+    if (!fix)
     {
         logger.error("Fixture {} doesn't exist", fixUid);
         return false;
     }
 
-    auto &f = **fix;
+    auto &f = *fix;
     auto &uni = getUniverse(universe);
 
     if (!uni.checkMultiple(addr, 1, f.size))
@@ -147,7 +154,6 @@ bool Patch::patch(uint32_t fixUid, uint16_t universe, uint32_t addr)
 
     f.setBuffer(uni.getRaw());
     f.setStart(pinfo.start);
-    f.SetUniverse(universe);
 
     logger.success("Patched fixture {} to uni:{} addr:[{}-{}]", fixUid, universe, pinfo.start,
                    pinfo.start + pinfo.size - 1);
@@ -169,7 +175,7 @@ bool Patch::patch(const std::vector<uint32_t> &fixUids, uint16_t universe, uint3
     for (auto id : fixUids)
     {
         auto fix = getFixture(id);
-        if (!fix.has_value())
+        if (!fix)
         {
             logger.error("Fixture {} doesn't exist", id);
             return false;
@@ -182,7 +188,7 @@ bool Patch::patch(const std::vector<uint32_t> &fixUids, uint16_t universe, uint3
             return false;
         }
 
-        total += (*fix)->size;
+        total += fix->size;
     }
 
     auto &uni = getUniverse(universe);
@@ -196,13 +202,12 @@ bool Patch::patch(const std::vector<uint32_t> &fixUids, uint16_t universe, uint3
     uint32_t curr = addr;
     for (auto id : fixUids)
     {
-        auto &f = **getFixture(id);
+        auto &f = *getFixture(id);
         auto &pinfo = uni.add(f.size, curr);
 
         m_fixtureStatus[id] = FixtureStatus{universe, pinfo.id};
         f.setBuffer(uni.getRaw());
         f.setStart(pinfo.start);
-        f.SetUniverse(universe);
 
         curr += f.size;
     }
@@ -253,7 +258,7 @@ std::vector<uint16_t> Patch::patch(Fixtures::Fixture *fixtemplate, uint16_t univ
     }
 
     auto previd = m_fixCurrentID;
-    // auto fid = startFID ? *startFID : previd;
+    auto fid = startFID ? *startFID : previd;
     auto fixtures = addFixtures(fixture, amount);
 
     std::vector<uint16_t> fids;
@@ -265,17 +270,15 @@ std::vector<uint16_t> Patch::patch(Fixtures::Fixture *fixtemplate, uint16_t univ
         auto f = fixtures[i];
         auto &pinfo = placed[i].get();
         m_fixtureStatus[previd] = {universe, pinfo.id};
-        // m_fixtureByFIDs[previd].push_back(fid);
+        m_fixtureByFIDs[static_cast<uint16_t>(fid)].push_back(previd); // fid -> uid
 
         f->setBuffer(uni.getRaw());
         f->setStart(pinfo.start);
-        f->SetFid(previd);
-        // f->SetFid(fid);
-        f->SetUniverse(universe);
+        f->SetFid(static_cast<uint16_t>(fid));
         fids.push_back(f->Fid());
 
         previd++;
-        // fid++;
+        fid++;
     }
 
     logger.success("Patched {} {} to uni:{} addr:[{}-{}]", amount, name, universe, start.has_value() ? *start : 0, placed.back().get().start + placed.back().get().size - 1);
@@ -347,7 +350,7 @@ std::vector<Patch::FixturePtr> Patch::fixturesByFID(uint16_t fid) const
     ret.reserve(it->second.size());
     for (auto uid : it->second)
         if (auto f = getFixture(uid))
-            ret.push_back(*f);
+            ret.push_back(f);
     return ret;
 }
 

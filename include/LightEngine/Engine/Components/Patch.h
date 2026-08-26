@@ -51,7 +51,6 @@ class Patch : public Utils::Traits::Describe
 
     DMX::UniversePatch &getUniverse(uint16_t universe);
 
-    std::optional<FixturePtr> getFixture(uint32_t id) const;
     std::optional<FixtureStatus> isPatched(uint32_t id) const;
     std::optional<FixPatch> patchInfo(uint32_t id) const;
 
@@ -70,19 +69,16 @@ public:
     bool unpatch(uint32_t id);
     uint32_t unpatch(const std::vector<uint32_t> &ids);
 
-    // Fixture UIDs ordered by (universe, start address); unpatched fixtures come last,
-    // ordered by UID.
     [[nodiscard]] std::vector<uint64_t> sortedByAddress() const;
 
     void clearDMXBuffers();
 
-    // temp
-    std::map<uint64_t, FixturePtr> &fixs()
+    [[nodiscard]] FixturePtr getFixture(uint64_t uid) const;
+    [[nodiscard]] std::vector<FixturePtr> fixturesByFID(uint16_t fid) const;
+    [[nodiscard]] const std::map<uint64_t, FixturePtr> &fixturesByUID() const
     {
         return m_fixtureByUID;
     }
-
-    std::vector<FixturePtr> fixturesByFID(uint16_t fid) const;
 
     const std::map<uint16_t, LightEngine::DMX::UniversePatch> &universes() const
     {

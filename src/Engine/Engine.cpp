@@ -221,7 +221,7 @@ void Engine::update(float dt)
     // 1. compose: layers write their contributions into the frame, composed
     // in
     //    priority order (low -> high) so higher layers' LTP writes win.
-    // m_frame.clear();
+    m_frame.clear();
     // std::stable_sort(m_layers.begin(), m_layers.end(),
     //                  [](const Layer *a, const Layer *b)
     //                  { return a->priority() < b->priority(); });

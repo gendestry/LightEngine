@@ -37,22 +37,23 @@ std::string Fixture::toString() const
 {
     // std::stringstream ss;
     // ss << "FID: " << m_fid << " \"" << m_name << "\" [" << size << " bytes]";
-    std::string patched;
-    if (isPatched())
-    {
-        patched = Utils::String::format("uni: {}, addr: {}", m_universe.value(), start);
-    }
-    else
-    {
-        patched = "Unpatched";
-    }
+    std::string patched = "";
+    // if (isPatched())
+    // {
+    //     patched = Utils::String::format("uni: {}, addr: {}", m_universe.value(), start);
+    // }
+    // else
+    // {
+    //     patched = "Unpatched";
+    // }
     return Utils::String::format("'{}':  fid: {}, {}, size: {} bytes",
                                  m_config->name, m_fid, patched, size);
 }
 
 Fixture::Fixture(const Fixture &other)
     : Utils::Fragment(other), m_config(other.m_config), m_fid(other.m_fid),
-      m_universe(other.m_universe), m_buffer(nullptr),
+      //   m_universe(other.m_universe),
+      m_buffer(nullptr),
       m_parameters(other.m_parameters)
 {
     for (Parameter &p : m_parameters)
@@ -71,7 +72,7 @@ Fixture &Fixture::operator=(const Fixture &other)
         // m_name = other.m_name;
         m_config = other.m_config;
         m_fid = other.m_fid;
-        m_universe = other.m_universe;
+        // m_universe = other.m_universe;
         m_buffer = nullptr;
         m_parameters = other.m_parameters;
 
@@ -112,7 +113,8 @@ Fixture::Fixture(Fixture &&other) noexcept
     : Utils::Fragment(std::move(other)),
       //   Utils::Traits::IDGenerator<Fixture>(std::move(other)),
       m_config(std::move(other.m_config)), m_fid(other.m_fid),
-      m_universe(other.m_universe), m_buffer(other.m_buffer),
+      //   m_universe(other.m_universe),
+      m_buffer(other.m_buffer),
       m_parameters(std::move(other.m_parameters))
 {
     other.m_buffer = nullptr;
@@ -129,7 +131,7 @@ Fixture &Fixture::operator=(Fixture &&other) noexcept
         // Utils::Traits::IDGenerator<Fixture>::operator=(std::move(other));
         m_config = std::move(other.m_config);
         m_fid = other.m_fid;
-        m_universe = other.m_universe;
+        // m_universe = other.m_universe;
         m_buffer = other.m_buffer;
         m_parameters = std::move(other.m_parameters);
 
