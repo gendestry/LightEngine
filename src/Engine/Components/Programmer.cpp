@@ -49,13 +49,20 @@ void FixtureSelection::add(const Utils::Maths::Interval &fids)
 }
 
 
+void Programmer::applyEffect(std::shared_ptr<Effects::EffectWrapper> eff)
+{
+    m_runningEffects.push(std::move(eff));
+}
+
 void Programmer::setColor(const Utils::Colors::RGB &rgb)
 {
+    logger.info("Setting color: {}", rgb.toString());
     m_runningEffects.pushRet<Effects::StaticColor>(m_selection.get(), rgb);
 }
 
 void Programmer::setIntensity(float v)
 {
+    logger.info("Setting intensity: {}", v);
     m_runningEffects.pushRet<Effects::StaticIntensity>(m_selection.get(), v);
 }
 

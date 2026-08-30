@@ -29,10 +29,7 @@ target_link_libraries(synparser PUBLIC utils)
 # --------------------------------------------------
 file(GLOB_RECURSE LIGHTENGINE_SOURCES CONFIGURE_DEPENDS src/*.cpp)
 
-add_library(LightEngine ${LIGHTENGINE_SOURCES}
-        src/Effects/EffectBase.cpp
-        include/LightEngine/Effects/Static/StaticSnapshot.h
-        src/Effects/Static/StaticSnapshot.cpp)
+add_library(LightEngine ${LIGHTENGINE_SOURCES})
 add_library(LightEngine::LightEngine ALIAS LightEngine)
 
 target_compile_features(LightEngine PUBLIC cxx_std_23)
@@ -57,6 +54,12 @@ set(LE_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/LightEngine/Commands/data")
 add_executable(LightEngine_demo examples/demo/main.cpp)
 target_link_libraries(LightEngine_demo PRIVATE LightEngine::LightEngine)
 target_compile_definitions(LightEngine_demo PRIVATE LE_DATA_DIR="${LE_DATA_DIR}")
+
+# Full-functionality walkthrough: programmer, static + animated effects,
+# store/recall of groups and presets. See examples/presets/main.cpp.
+add_executable(LightEngine_presets examples/presets/main.cpp)
+target_link_libraries(LightEngine_presets PRIVATE LightEngine::LightEngine)
+target_compile_definitions(LightEngine_presets PRIVATE LE_DATA_DIR="${LE_DATA_DIR}")
 
 # add_executable(LightEngine_commands examples/commands/main.cpp)
 # target_link_libraries(LightEngine_commands PRIVATE LightEngine::LightEngine)

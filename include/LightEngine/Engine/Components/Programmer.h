@@ -47,6 +47,15 @@ public:
 
     void applyEffect(std::shared_ptr<Effects::EffectWrapper> eff);
 
+    // The static picture of the current selection, one category at a time -
+    // what a `store preset` command captures. See EffectGroup::snapshotStatic
+    // for what "static" excludes (fixtures a running animated effect owns).
+    [[nodiscard]] std::vector<std::pair<uint16_t, FixtureValues>>
+    snapshotStatic(Effects::EffectCategory cat, const Utils::Time::TimeContext &t)
+    {
+        return m_runningEffects.snapshotStatic(m_selection.get(), cat, t);
+    }
+
     void setColor(const Utils::Colors::RGB &rgb); // converts to HSV, hue/sat
     void setIntensity(float v);
 

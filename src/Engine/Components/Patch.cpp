@@ -397,7 +397,7 @@ std::string Patch::uniDumpStr() const
     std::string ret;
     for (auto &[k, v] : m_universes)
     {
-        ret += v.dump();
+        ret += v.dump(512);
     }
     return ret;
 }

@@ -62,9 +62,22 @@ public:
     Pools::Group &storeGroup(uint32_t num);
     Pools::Group &storeGroup();
 
-    // Pools::Color &storeColorPreset(uint32_t num);
-    // Pools::Color &storeColorPreset();
-    // void recallColorPreset(uint32_t num);
+    // Snapshot the current selection's static picture for one attribute -
+    // fixtures a running animated effect in that category owns are excluded.
+    // See EffectGroup::snapshotStatic.
+    Pools::Preset &storeColorPreset(uint32_t num);
+    Pools::Preset &storeColorPreset();
+    Pools::Preset &storeDimmerPreset(uint32_t num);
+    Pools::Preset &storeDimmerPreset();
+
+    void recallColorPreset(uint32_t num);
+    void recallDimmerPreset(uint32_t num);
+
+    // Rename a stored object. false if `num` doesn't exist in that pool.
+    // Presets are numbered per-category (color 1 and dimmer 1 are distinct
+    // objects), so a preset rename has to say which pool it means.
+    bool renameGroup(uint32_t num, const std::string &name);
+    bool renamePreset(Effects::EffectCategory cat, uint32_t num, const std::string &name);
 
     void update(float dt = 0.f);
 

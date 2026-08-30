@@ -153,6 +153,7 @@ public:
 
     [[nodiscard]] std::size_t size() const { return m_items.size(); }
     [[nodiscard]] bool empty() const { return m_items.empty(); }
+    [[nodiscard]] const std::string &name() const { return m_name; }
 
     // Sorted iteration by number (map guarantees ascending order).
     [[nodiscard]] auto begin() const { return m_items.begin(); }
