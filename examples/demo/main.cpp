@@ -22,7 +22,7 @@ int main()
     auto f2 = patch.patch(rgb, 2, 10);
 
     auto &prog = engine.programmer();
-    // prog.select(f1);
+    prog.select(f1);
     // prog.setColor({255, 128, 0});
     // prog.addDimmerChase();
     // engine.storeGroup();

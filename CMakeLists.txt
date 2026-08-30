@@ -29,7 +29,10 @@ target_link_libraries(synparser PUBLIC utils)
 # --------------------------------------------------
 file(GLOB_RECURSE LIGHTENGINE_SOURCES CONFIGURE_DEPENDS src/*.cpp)
 
-add_library(LightEngine ${LIGHTENGINE_SOURCES})
+add_library(LightEngine ${LIGHTENGINE_SOURCES}
+        src/Effects/EffectBase.cpp
+        include/LightEngine/Effects/Static/StaticSnapshot.h
+        src/Effects/Static/StaticSnapshot.cpp)
 add_library(LightEngine::LightEngine ALIAS LightEngine)
 
 target_compile_features(LightEngine PUBLIC cxx_std_23)

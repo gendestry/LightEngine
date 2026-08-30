@@ -35,37 +35,29 @@ public:
 class Programmer : public Utils::Traits::Stringify
 {
     Effects::EffectGroup m_runningEffects;
-    // FixtureSelection m_fixselection;
-    // StaticEffectHolder m_staticEffects;
-    Utils::Maths::Interval m_interval;
+    FixtureSelection m_selection;
     Utils::Logger logger;
 
 public:
     Programmer() : logger("Programmer") {}
-    void select(const Utils::Maths::Interval &fids);
-    void select(const std::vector<uint16_t> &fids);
-    void add(const std::vector<uint16_t> &fids);
-    void add(const Utils::Maths::Interval &fids);
+    void select(const Utils::Maths::Interval &fids) { m_selection.select(fids); }
+    void select(const std::vector<uint16_t> &fids)  { m_selection.select(fids); }
+    void add(const Utils::Maths::Interval &fids)    { m_selection.add(fids); }
+    void add(const std::vector<uint16_t> &fids)     { m_selection.add(fids); }
 
     void applyEffect(std::shared_ptr<Effects::EffectWrapper> eff);
 
-    // ---- edits (scoped to the current selection) ----
-    // void setColor(const Utils::Colors::HSV &hsv); // sets hue/sat only
     void setColor(const Utils::Colors::RGB &rgb); // converts to HSV, hue/sat
     void setIntensity(float v);
 
     void addDimmerChase();
 
-    // StaticEffectHolder &getStaticEffects() { return m_staticEffects; }
-    const Utils::Maths::Interval &selected() const { return m_interval; }
+    const Utils::Maths::Interval &selected() const { return m_selection.get(); }
 
-    void clearCurrent() {}
     void clearAll()
     {
-
-        m_interval.clear();
+        m_selection.clear();
         m_runningEffects.clear();
-        // m_staticEffects.clear();
     } // wipe both
 
     void apply(Frame &frame, const Utils::Time::TimeContext &time);

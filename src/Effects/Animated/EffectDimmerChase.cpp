@@ -44,6 +44,16 @@ void DimmerChase::setCurve(Utils::Maths::Type type)
     markDirty();
 }
 
+std::shared_ptr<EffectBase> DimmerChase::clone() const
+{
+    // Rebuilds the curve rather than copying m_curve (unique_ptr, non-copyable).
+    // m_steps doubles as the curve resolution - see the constructor.
+    auto c = std::make_shared<DimmerChase>(m_type, m_bpm, m_spread, m_steps);
+    c->setEnabled(enabled());
+    c->markDirty();
+    return c;
+}
+
 void DimmerChase::recompute(const Utils::Time::TimeContext &t,
                             const Utils::Maths::Interval &g)
 {

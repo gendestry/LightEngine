@@ -23,6 +23,11 @@ public:
 
     EFFECT_CATEGORY(DIMMER);
 
+    // Hand-written, not EFFECT_CLONE: m_curve is a unique_ptr, so the default
+    // copy ctor is deleted. Rebuild it from (type, bpm, spread, steps) instead
+    // of copying the pointer.
+    [[nodiscard]] std::shared_ptr<EffectBase> clone() const override;
+
 protected:
     void recompute(const Utils::Time::TimeContext &t,
                    const Utils::Maths::Interval &g) override;

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cmath>
 #include <cstdint>
 #include <limits>
 #include <memory>
@@ -8,7 +7,6 @@
 #include <vector>
 
 #include "LightEngine/DMX/FixtureGroup.h"
-// #include "LightEngine/Effects/EffectSpec.h"
 #include "LightEngine/Engine/Layers/Frame.h"
 #include "Utils/Math/Curve.h"
 #include "Utils/Time/TimeContext.h"
@@ -47,9 +45,9 @@ enum class EffectCategory
 #define EFFECT_TYPE(type)                                          \
     static EffectType GetStaticType() { return EffectType::type; } \
     virtual EffectType GetEffectType() const override              \
-    {                                                              \
+    {                                                               \
         return GetStaticType();                                    \
-    }                                                              \
+    }                                                               \
     virtual const char *GetTypeName() const override { return #type; }
 
 #define EFFECT_CATEGORY(type)                                                  \
@@ -60,6 +58,16 @@ enum class EffectCategory
     }                                                                          \
     virtual const char *GetCategoryName() const override { return #type; }
 
+// Deep-copies via T's copy constructor, then marks the copy dirty - the
+// inherited m_cache belongs to the source's group, not the clone's.
+#define EFFECT_CLONE(T)                                        \
+    virtual std::shared_ptr<EffectBase> clone() const override \
+    {                                                           \
+        auto c = std::make_shared<T>(*this);                    \
+        c->markDirty();                                          \
+        return c;                                                \
+    }
+
 class EffectBase
 {
 public:
@@ -68,7 +76,6 @@ public:
 
 protected:
     bool m_enabled = true;
-    // EffectType m_type;
 
     // The last computed output, replayed on frames where this effect is not
     // due. Rebuilt wholesale by recompute() - effects are pure functions of
@@ -76,65 +83,26 @@ protected:
     std::vector<std::pair<uint16_t, Engine::FixtureValues>> m_cache;
     Engine::MergePolicy m_policy = Engine::MergePolicy::LTP;
 
-    // Invalidation: an edit sets m_dirty; a selection change is caught by
-    // comparing the group's revision against the one the cache was built from.
     bool m_dirty = true;
     uint64_t m_cachedRevision = 0;
 
-    // Scheduling. m_phaseOrigin is the anchor of this effect's own beat grid
-    // (start time, or the last BPM change / tap-sync).
     double m_nextDue = 0.0;
     double m_phaseOrigin = 0.0;
 
-    // Subclass hook: fill m_cache (already cleared) via emit(). Called only on
-    // frames where this effect is due.
-    virtual void recompute(const Utils::Time::TimeContext &t,
-                           const Utils::Maths::Interval &group) = 0;
-
-    void emit(uint16_t fid, const Engine::FixtureValues &values)
-    {
-        m_cache.emplace_back(fid, values);
-    }
+    virtual void recompute(const Utils::Time::TimeContext &t, const Utils::Maths::Interval &group) = 0;
+    void emit(uint16_t fid, const Engine::FixtureValues &values);
 
 public:
-    // EffectBase(EffectType type) : m_type(type) {}
     virtual ~EffectBase() = default;
 
-    // Seconds between steps that actually produce different output. NEVER for
-    // a static effect (the default), 0 for a continuously varying one.
     [[nodiscard]] virtual double stepInterval() const { return NEVER; }
-
-    // Does this effect need recomputing this frame? One comparison in the
-    // common case - this is what replaces re-running the effect every frame.
-
-    [[nodiscard]] bool due(double now, const Utils::Maths::Interval &group) const
-    {
-        return m_dirty || now >= m_nextDue;
-    }
-    // [[nodiscard]] bool due(double now, const DMX::FixtureGroup &group) const
-    // {
-    //     return m_dirty || group.revision() != m_cachedRevision ||
-    //            now >= m_nextDue;
-    // }
+    [[nodiscard]] bool due(double now, const Utils::Maths::Interval &group) const;
 
     // Recompute the cache and schedule the next wake-up.
-    void evaluate(const Utils::Time::TimeContext &t, const Utils::Maths::Interval &group)
-    {
-        m_cache.clear();
-        recompute(t, group);
-        // m_cachedRevision = group.revision();
-        m_dirty = false;
-        scheduleNext(t.now);
-    }
+    void evaluate(const Utils::Time::TimeContext &t, const Utils::Maths::Interval &group);
 
     // Merge the cached output into this frame. Cheap: no effect logic runs.
-    void replay(Engine::Frame &frame) const
-    {
-        for (const auto &[fid, values] : m_cache)
-        {
-            frame.contribute(fid, values, m_policy);
-        }
-    }
+    void replay(Engine::Frame &frame) const;
 
     // Any parameter change must call this, or the edit never reaches the cache.
     void markDirty() { m_dirty = true; }
@@ -142,52 +110,25 @@ public:
     // Advance m_nextDue onto the next point of this effect's own grid. Anchored
     // to m_phaseOrigin rather than `now` on purpose: `now + interval` would
     // accumulate the frame's timing jitter and walk the effect off the beat.
-    void scheduleNext(double now)
-    {
-        const double interval = stepInterval();
-        if (!std::isfinite(interval))
-        {
-            m_nextDue = NEVER; // static: only an edit brings it back
-            return;
-        }
-        if (interval <= 0.0)
-        {
-            m_nextDue = now; // continuous: due again immediately
-            return;
-        }
-        const double steps = std::floor((now - m_phaseOrigin) / interval) + 1.0;
-        m_nextDue = m_phaseOrigin + steps * interval;
-    }
-
-    // Re-anchor the beat grid to `now` (effect start, BPM change, tap-sync).
-    void syncPhase(double now)
-    {
-        m_phaseOrigin = now;
-        m_dirty = true;
-    }
+    void scheduleNext(double now);
+    void syncPhase(double now); // Re-anchor the beat grid to `now` (effect start, BPM change, tap-sync).
 
     [[nodiscard]] double nextDue() const { return m_nextDue; }
-
-    // EffectType getType() const { return m_type; }
-    // [[nodiscard]] virtual Spec spec() const = 0;
 
     void setEnabled(bool enabled) { m_enabled = enabled; }
     [[nodiscard]] bool enabled() const { return m_enabled; }
 
-    [[nodiscard]] const std::vector<
-        std::pair<uint16_t, Engine::FixtureValues>> &
-    getValues()
-    {
-        return m_cache;
-    }
+    [[nodiscard]] const std::vector<std::pair<uint16_t, Engine::FixtureValues>> &getValues() const { return m_cache; }
+
+    // Deep copy, used by store/recall so a stored effect never aliases the
+    // live one it was cloned from.
+    [[nodiscard]] virtual std::shared_ptr<EffectBase> clone() const = 0;
 
     virtual EffectType GetEffectType() const = 0;
     virtual const char *GetTypeName() const = 0;
 
     virtual EffectCategory GetEffectCategory() const = 0;
     virtual const char *GetCategoryName() const = 0;
-
-    // virtual std::string describe() const = 0;
 };
 
 class EffectAnimated : public EffectBase
@@ -201,8 +142,7 @@ protected:
     uint16_t m_steps = 0;
 
 public:
-    // EffectAnimated() : EffectBase(EffectType::ANIMATED) {}
-    EffectAnimated() : EffectBase() {}
+    EffectAnimated() = default;
 
     EFFECT_TYPE(ANIMATED);
 

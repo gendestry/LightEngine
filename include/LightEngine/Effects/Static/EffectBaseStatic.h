@@ -6,20 +6,7 @@ namespace LightEngine::Effects
 class EffectStatic : public EffectBase
 {
 public:
-    // EffectStatic() : EffectBase(EffectType::STATIC) {}
-    EffectStatic() : EffectBase() {}
-    EffectStatic(
-        const std::vector<std::pair<uint16_t, LightEngine::Engine::FixtureValues>> &vals)
-        : EffectBase()
-    {
-        setCache(vals);
-    }
-
-    virtual void setCache(
-        const std::vector<std::pair<uint16_t, LightEngine::Engine::FixtureValues>> &vals)
-    {
-        m_cache = vals;
-    }
+    EffectStatic() = default;
 
     EFFECT_TYPE(STATIC);
 };

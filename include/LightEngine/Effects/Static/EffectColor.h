@@ -3,15 +3,13 @@
 #include <utility>
 
 #include "Utils/Colors/RGB.h"
-// #include ""
 
 #include "LightEngine/Effects/Static/EffectBaseStatic.h"
 
 //
 // Concrete effects. Static ones ignore time; dynamic ones animate off the
 // TimeContext. Per-fixture effects use the fixture's index within the group.
-// Each effect owns its group (passed by value), contributes into the frame and
-// can report its Spec.
+// Each effect owns its group (passed by value) and contributes into the frame.
 //
 namespace LightEngine::Effects
 {
@@ -22,23 +20,11 @@ class StaticColor : public EffectStatic
 
 public:
     StaticColor(Utils::Colors::RGB color) : m_color(color) {}
-    StaticColor(
-        const std::vector<std::pair<uint16_t, LightEngine::Engine::FixtureValues>> &vals)
-        : EffectStatic(vals)
-    {
-    }
     void setColor(Utils::Colors::RGB color)
     {
         m_color = color;
         markDirty();
     }
-
-    // virtual void setCache(
-    //     const std::vector<std::pair<uint16_t, LightEngine::Engine::FixtureValues>> &vals)
-    //     override
-    // {
-    //     m_cache = vals;
-    // }
 
 protected:
     void recompute(const Utils::Time::TimeContext &t,
@@ -46,13 +32,7 @@ protected:
 
 public:
     EFFECT_CATEGORY(COLOR);
-
-    // std::string describe() const override
-    // {
-    //     auto &c = m_color;
-    //     return std::format("Set color to {} {} {}", c.r, c.g, c.b);
-    // };
-    // [[nodiscard]] Spec spec() const override;
+    EFFECT_CLONE(StaticColor);
 };
 
 } // namespace LightEngine::Effects

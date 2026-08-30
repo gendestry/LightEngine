@@ -3,19 +3,9 @@
 #include "LightEngine/Effects/Animated/EffectDimmerChase.h"
 #include "LightEngine/Effects/Static/EffectColor.h"
 #include "LightEngine/Effects/Static/EffectIntensity.h"
-#include "Utils/Colors/Colors.h"
 
 namespace LightEngine::Engine::Components
 {
-namespace
-{
-// Force value to 1 so the hue/sat survives the RGB round-trip a ColorEffect
-// does internally (a value of 0 would collapse to black and lose the hue).
-Utils::Colors::RGB hueSatToRgb(float h, float s)
-{
-    return Utils::Colors::hsvToRgb(Utils::Colors::HSV{h, s, 1.f});
-}
-} // namespace
 
 void FixtureSelection::select(const Utils::Maths::Interval &fids)
 {
@@ -58,62 +48,20 @@ void FixtureSelection::add(const Utils::Maths::Interval &fids)
     logger.info("Selected fixtures: {}", m_interval.toString());
 }
 
-void Programmer::select(const Utils::Maths::Interval &fids)
-{
-    if (fids.empty())
-    {
-        logger.warn("Selecting 0 fixtures");
-    }
-    m_interval = fids;
-    logger.info("Selected fixtures: {}", m_interval.toString());
-}
-
-void Programmer::select(const std::vector<uint16_t> &fids)
-{
-    m_interval.clear();
-    if (fids.empty())
-    {
-        logger.warn("Selecting 0 fixtures");
-    }
-    m_interval.add(fids);
-    logger.info("Selected fixtures: {}", m_interval.toString());
-}
-
-void Programmer::add(const std::vector<uint16_t> &fids)
-{
-    if (fids.empty())
-    {
-        logger.warn("Adding 0 to selection fixtures");
-    }
-    m_interval.add(fids);
-    logger.info("Selected fixtures: {}", m_interval.toString());
-}
-
-void Programmer::add(const Utils::Maths::Interval &fids)
-{
-    if (fids.empty())
-    {
-        logger.warn("Adding 0 to selection fixtures");
-    }
-    m_interval |= fids;
-    logger.info("Selected fixtures: {}", m_interval.toString());
-}
 
 void Programmer::setColor(const Utils::Colors::RGB &rgb)
 {
-    // m_staticEffects.setColor(m_interval, rgb);
-    m_runningEffects.pushRet<Effects::StaticColor>(m_interval, rgb);
+    m_runningEffects.pushRet<Effects::StaticColor>(m_selection.get(), rgb);
 }
 
 void Programmer::setIntensity(float v)
 {
-    // m_staticEffects.setIntensity(m_interval, v);
-    m_runningEffects.pushRet<Effects::StaticIntensity>(m_interval, v);
+    m_runningEffects.pushRet<Effects::StaticIntensity>(m_selection.get(), v);
 }
 
 void Programmer::addDimmerChase()
 {
-    m_runningEffects.pushRet<Effects::DimmerChase>(m_interval, Utils::Maths::SINUSOID, 60.f, 1.f, m_interval.size());
+    m_runningEffects.pushRet<Effects::DimmerChase>(m_selection.get(), Utils::Maths::SINUSOID, 60.f, 1.f, m_selection.get().size());
 }
 
 // std::map<uint16_t, FixtureValues> Programmer::edits() const
@@ -135,36 +83,6 @@ void Programmer::apply(Frame &frame, const Utils::Time::TimeContext &time)
     // recomputes when it is due (edited, its selection changed, or its own beat
     // grid says a new step arrived); otherwise its cached output is
     // replayed.
-    for (auto &eff : m_runningEffects.getEffects())
-    {
-        const auto &group = eff->group;
-        const auto &e = eff->effect;
-        if (!e->enabled())
-        {
-            continue;
-        }
-        if (e->due(time.now, group))
-        {
-            e->evaluate(time, group);
-        }
-        e->replay(frame);
-    }
-
-    // for (auto &stack : running.stacks)
-    // {
-    //     const auto &group = stack.selection;
-    //     for (const auto &e : stack.effects)
-    //     {
-    //         if (!e->enabled())
-    //         {
-    //             continue;
-    //         }
-    //         if (e->due(time.now, group))
-    //         {
-    //             e->evaluate(time, group);
-    //         }
-    //         e->replay(frame);
-    //     }
-    // }
+    m_runningEffects.apply(frame, time);
 }
 } // namespace LightEngine::Engine::Components

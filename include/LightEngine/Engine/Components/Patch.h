@@ -80,7 +80,7 @@ public:
         return m_fixtureByUID;
     }
 
-    const std::map<uint16_t, LightEngine::DMX::UniversePatch> &universes() const
+    [[nodiscard]] const std::map<uint16_t, LightEngine::DMX::UniversePatch> &universes() const
     {
         return m_universes;
     }
