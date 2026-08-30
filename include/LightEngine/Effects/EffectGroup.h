@@ -88,5 +88,19 @@ public:
             effect->replay(frame);
         }
     }
+
+    // The union of every enabled ANIMATED effect's group in this category.
+    // Used by snapshotStatic() to exclude fixtures a running effect owns from
+    // a store - the static value underneath a chase isn't what's on stage.
+    [[nodiscard]] Utils::Maths::Interval animatedCoverage(EffectCategory cat) const;
+
+    // The static (non-animated) picture of `sel`, restricted to fixtures no
+    // animated effect in `cat` currently covers. Replays every enabled STATIC
+    // effect of this group into a scratch frame (LTP-by-order, same as apply())
+    // and reads back only the entries `sel` asks for. This is what a preset
+    // stores: the store algorithm, not a rendering path.
+    [[nodiscard]] std::vector<std::pair<uint16_t, LightEngine::Engine::FixtureValues>>
+    snapshotStatic(const Utils::Maths::Interval &sel, EffectCategory cat,
+                   const Utils::Time::TimeContext &t);
 };
 } // namespace LightEngine::Effects

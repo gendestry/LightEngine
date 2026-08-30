@@ -1,5 +1,7 @@
 #include "LightEngine/Engine/Engine.h"
 
+#include "LightEngine/Effects/Static/StaticSnapshot.h"
+
 // #include "LightEngine/Commands/CommandExecutor.h"
 // #include "LightEngine/Commands/CommandParser.h"
 
@@ -81,52 +83,84 @@ Pools::Group &Engine::storeGroup()
     return m_presets.groups().emplace(m_programmer.selected());
 }
 
-// // ---- color presets ----
-// // Captures the whole programmer, not just the current selection: every fixture
-// // touched since the last clear() is banked, so a preset built across several
-// // selections (group then a stray fixture) keeps them all.
-// Pools::Color &Engine::storeColorPreset(uint32_t num)
-// {
-//     return m_presets.colors().emplaceAt(
-//         num,
-//         std::make_shared<Effects::StaticColor>(
-//             m_programmer.getStaticEffects().getColor(m_programmer.selected())));
-// }
+// ---- presets ----
+// Store: snapshot the current selection's static picture for one attribute
+// (see Programmer::snapshotStatic / EffectGroup::snapshotStatic for what
+// "static" excludes) and wrap it in a fresh StaticSnapshot.
+namespace
+{
+std::shared_ptr<Effects::StaticSnapshot>
+makeSnapshot(Components::Programmer &programmer, Effects::EffectCategory cat,
+            const Utils::Time::TimeContext &time)
+{
+    return std::make_shared<Effects::StaticSnapshot>(
+        programmer.snapshotStatic(cat, time), cat);
+}
+} // namespace
 
-// Pools::Color &Engine::storeColorPreset()
-// {
-//     return m_presets.colors().emplace(
-//         std::make_shared<Effects::StaticColor>(
-//             m_programmer.getStaticEffects().getColor(m_programmer.selected())));
-// }
+Pools::Preset &Engine::storeColorPreset(uint32_t num)
+{
+    return m_presets.presets(Effects::EffectCategory::COLOR)
+        .emplaceAt(num, makeSnapshot(m_programmer, Effects::EffectCategory::COLOR, m_time));
+}
 
-// void Engine::recallColorPreset(uint32_t num)
-// {
-//     if (auto preset = m_presets.colors().get(num))
-//     {
-//         //         for (auto it : preset->get())
-//         //         {
-//         //             m_programmer.applyEffect(it);
-//         //         }
-//     }
-//     //     // preset->recall(m_programmer, m_programmer.selection());
-// }
+Pools::Preset &Engine::storeColorPreset()
+{
+    return m_presets.presets(Effects::EffectCategory::COLOR)
+        .emplace(makeSnapshot(m_programmer, Effects::EffectCategory::COLOR, m_time));
+}
 
-// // ---- dimmer presets ----
-// Pools::DimmerPreset &Engine::storeDimmerPreset(uint32_t num)
-// {
-//     auto preset = std::make_shared<Pools::DimmerPreset>();
-//     for (const auto &[fid, v] : m_programmer.edits())
-//         if (v.intensity)
-//             preset->set(fid, *v.intensity);
-//     return m_stored.dimmerPresets().store(num, std::move(preset));
-// }
+Pools::Preset &Engine::storeDimmerPreset(uint32_t num)
+{
+    return m_presets.presets(Effects::EffectCategory::DIMMER)
+        .emplaceAt(num, makeSnapshot(m_programmer, Effects::EffectCategory::DIMMER, m_time));
+}
 
-// void Engine::recallDimmerPreset(uint32_t num)
-// {
-//     if (auto preset = m_stored.dimmerPresets().get(num))
-//         preset->recall(m_programmer, m_programmer.selection());
-// }
+Pools::Preset &Engine::storeDimmerPreset()
+{
+    return m_presets.presets(Effects::EffectCategory::DIMMER)
+        .emplace(makeSnapshot(m_programmer, Effects::EffectCategory::DIMMER, m_time));
+}
+
+// Recall: mask the preset's own value table by whatever is selected *now* -
+// recalling on a subset only touches that subset, because StaticSnapshot's
+// recompute() intersects its table against the group it's evaluated with.
+namespace
+{
+void recallPreset(Components::Programmer &programmer, Effects::EffectCategory cat,
+                  const Components::Presets &presets, uint32_t num,
+                  Utils::Logger &logger)
+{
+    auto preset = presets.presets(cat).get(num);
+    if (!preset)
+    {
+        logger.warn("Preset {} does not exist", num);
+        return;
+    }
+    programmer.applyEffect(std::make_shared<Effects::EffectWrapper>(
+        Effects::EffectWrapper{programmer.selected(), preset->effect()->clone()}));
+}
+} // namespace
+
+void Engine::recallColorPreset(uint32_t num)
+{
+    recallPreset(m_programmer, Effects::EffectCategory::COLOR, m_presets, num, m_logger);
+}
+
+void Engine::recallDimmerPreset(uint32_t num)
+{
+    recallPreset(m_programmer, Effects::EffectCategory::DIMMER, m_presets, num, m_logger);
+}
+
+bool Engine::renameGroup(uint32_t num, const std::string &name)
+{
+    return m_presets.groups().rename(num, name);
+}
+
+bool Engine::renamePreset(Effects::EffectCategory cat, uint32_t num, const std::string &name)
+{
+    return m_presets.presets(cat).rename(num, name);
+}
 
 // // ---- lookup ----
 // std::shared_ptr<Fixtures::Fixture> Engine::getFixture(uint16_t fid)

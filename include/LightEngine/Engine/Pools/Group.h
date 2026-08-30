@@ -44,11 +44,18 @@ public:
 
     [[nodiscard]] std::string toString() const override
     {
-        const auto nameExpr =
-            name().empty() ? Theme::dim("Unnamed") : Theme::txt("{}");
+        // nameExpr is pre-formatted to a plain string, not spliced into the
+        // outer format string as a literal - that keeps exactly one "{}" per
+        // value below regardless of whether the object is named, so the
+        // fixture list can't silently absorb the empty name() argument (the
+        // bug this replaced: an unnamed object's "Unnamed" literal had no
+        // placeholder, which shifted every later {} one argument to the left).
+        const std::string nameExpr =
+            name().empty() ? Theme::dim("Unnamed") : Utils::Font::format(Theme::txt("{}"), name());
 
-        return Utils::Font::format(Utils::Font::group(Theme::lbl("Group "), "[", Theme::num("{}"), "]: ", nameExpr, "fixs: {}"),
-                                   number(), name(), m_group.toString());
+        return Utils::Font::format(
+            Utils::Font::group(Theme::lbl("Group "), "[", Theme::num("{}"), "]: ", "{}", " fixs: {}"),
+            number(), nameExpr, m_group.toString());
     }
 };
 } // namespace LightEngine::Engine::Pools
