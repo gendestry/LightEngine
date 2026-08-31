@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cstdint>
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -15,16 +13,15 @@
 #include "LightEngine/Output/DMXOutput.h"
 #include "Utils/Logging/Logger.h"
 #include "Utils/Time/TimeContext.h"
-// #include "Utils/Colors/RGB.h"
-// #include "LightEngine/Show/Sequence.h"      // TODO: playback / cues
+#include <memory>
 
 // Command subsystem is owned by Engine but kept out of this header (internal):
 // forward-declared here, fully included only in Engine.cpp.
-namespace LightEngine::Commands
+namespace LightEngine::Commands::Default
 {
 class CommandParser;
 class CommandExecutor;
-} // namespace LightEngine::Commands
+} // namespace LightEngine::Commands::Default
 
 //
 // Engine: the top-level orchestrator. Owns the Patch (universes + fixtures),
@@ -51,9 +48,19 @@ class Engine : public Utils::Traits::Stringify
     Utils::Logger m_logger;
     Utils::Time::TimeContext m_time; // advanced each update(); threaded into layers
 
+    std::unique_ptr<Commands::Default::CommandParser> m_parser;
+    std::unique_ptr<Commands::Default::CommandExecutor> m_exec;
+
 public:
     Engine();
     ~Engine(); // out-of-line: m_parser/m_exec are incomplete types here
+
+    // Load the grammar + token definitions (enables command()).
+    void loadCommands(const std::string &tokensFile,
+                      const std::string &grammarFile);
+    // Parse and execute one command line. Returns false on a parse error (or
+    // if loadCommands() hasn't been called).
+    bool command(const std::string &line);
 
     // // Select a stored group into the programmer (replace).
     // void selectGroup(uint32_t num);
@@ -81,13 +88,17 @@ public:
 
     void update(float dt = 0.f);
 
+    // Deselect and drop any running effects in the programmer (console-style
+    // "Clear" button) - does not touch stored groups/presets.
+    void clear();
+
     // // ---- layers ----
     void addLayer(Layer *layer) { m_layers.push_back(layer); }
 
     [[nodiscard]] const Utils::Time::TimeContext &time() const { return m_time; }
     [[nodiscard]] Components::Patch &patcher() { return m_patch; }
     [[nodiscard]] Components::Programmer &programmer() { return m_programmer; }
-    [[nodiscard]] const Components::Presets &presets() const { return m_presets; }
+    [[nodiscard]] Components::Presets &presets() { return m_presets; }
     [[nodiscard]] Components::FixtureLibrary &fixtureLibrary()
     {
         return m_library;

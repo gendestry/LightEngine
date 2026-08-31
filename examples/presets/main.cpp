@@ -22,6 +22,10 @@
 using namespace LightEngine;
 using Utils::Maths::Interval;
 
+#ifndef LE_DATA_DIR
+#define LE_DATA_DIR "include/LightEngine/Commands/Default/data"
+#endif
+
 namespace
 {
 Interval range(uint64_t from, uint64_t to)
@@ -43,15 +47,16 @@ int main()
     logger.setLevel(Utils::Logger::DEBUGGING);
 
     Engine::Engine engine;
+    engine.loadCommands(LE_DATA_DIR "/default.tok", LE_DATA_DIR "/default.syn");
 
     // ---- patch --------------------------------------------------------
     // 30 RGB fixtures on universe 1, FIDs 1-30, 3 DMX channels apart.
-    heading("Patch");
+    // heading("Patch");
     auto &lib = engine.fixtureLibrary();
     auto rgb = lib.find("RGB");
     auto &patch = engine.patcher();
     patch.patch(rgb, /*universe*/ 1, /*amount*/ 30, /*start*/ 1, /*startFID*/ 1);
-    std::cout << "Patched 30 RGB fixtures on universe 1 (fid 1-30)\n";
+    // std::cout << "Patched 30 RGB fixtures on universe 1 (fid 1-30)\n";
 
     const Interval group1 = range(1, 10);
     const Interval group2 = range(11, 20);
@@ -61,13 +66,14 @@ int main()
     group4 |= group3;
 
     // ---- program: static edits -----------------------------------------
-    heading("Program");
+    // heading("Program");
     auto &prog = engine.programmer();
 
     prog.select(group1);
     prog.add(group2);
     prog.setIntensity(1.0f);
-    engine.storeDimmerPreset();
+    auto &x = engine.storeDimmerPreset();
+    x.setName("100");
 
     prog.select(group2);
     prog.setColor({255, 128, 0}); // orange

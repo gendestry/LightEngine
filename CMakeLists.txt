@@ -21,7 +21,9 @@ file(GLOB SYNPARSER_SOURCES CONFIGURE_DEPENDS
 
 add_library(synparser STATIC ${SYNPARSER_SOURCES})
 target_compile_features(synparser PUBLIC cxx_std_23)
-target_include_directories(synparser PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib/NewSyntaxParser/src)
+target_include_directories(synparser PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/NewSyntaxParser/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/lib/NewSyntaxParser/include)
 target_link_libraries(synparser PUBLIC utils)
 
 # --------------------------------------------------
@@ -29,7 +31,13 @@ target_link_libraries(synparser PUBLIC utils)
 # --------------------------------------------------
 file(GLOB_RECURSE LIGHTENGINE_SOURCES CONFIGURE_DEPENDS src/*.cpp)
 
-add_library(LightEngine ${LIGHTENGINE_SOURCES})
+add_library(LightEngine ${LIGHTENGINE_SOURCES}
+        include/LightEngine/Commands/Default/AstBuilder.h
+        src/Commands/Default/AstBuilder.cpp
+        include/LightEngine/Commands/Default/Parser.h
+        src/Commands/Default/Parser.cpp
+        include/LightEngine/Commands/Default/Executor.h
+        src/Commands/Default/Executor.cpp)
 add_library(LightEngine::LightEngine ALIAS LightEngine)
 
 target_compile_features(LightEngine PUBLIC cxx_std_23)
