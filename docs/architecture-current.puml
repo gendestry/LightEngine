@@ -1,0 +1,784 @@
+@startuml LightEngineCurrent
+' =============================================================================
+'  LightEngine - AS BUILT on branch `cleanup` (read from the source, not the
+'  design notes). Everything drawn here exists in include/ or src/ today.
+'
+'  Companion: architecture-proposed.puml  - where this is meant to go.
+'  Predecessor: cleanup.puml              - status snapshot (done/partial/todo).
+'
+'  This diagram answers a different question than cleanup.puml: not "what is
+'  finished", but "what actually runs when update() is called, and what is
+'  merely compiled".
+' =============================================================================
+
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam nodesep 30
+skinparam ranksep 45
+skinparam shadowing false
+hide empty members
+
+skinparam class {
+  BackgroundColor<<live>>    #B6E7B0
+  BorderColor<<live>>        #2E7D32
+  BackgroundColor<<setup>>   #BBDEFB
+  BorderColor<<setup>>       #1565C0
+  BackgroundColor<<inert>>   #E0E0E0
+  BorderColor<<inert>>       #757575
+  BackgroundColor<<missing>> #F2B8B8
+  BorderColor<<missing>>     #C62828
+}
+
+legend top left
+  <back:#B6E7B0>  on the frame path  </back>   <back:#BBDEFB>  used, but setup/query only  </back>
+  <back:#E0E0E0>  compiles, nothing calls it  </back>   <back:#F2B8B8>  referenced but does not exist  </back>
+endlegend
+
+' =============================================================================
+' GDTF - immutable channel definitions (flyweights, shared by shared_ptr)
+' =============================================================================
+package "LightEngine::GDTF" #F4F9FF {
+
+  enum Attribute <<live>> {
+    DIMMER
+    VDIMMER
+    COLOR_R / COLOR_G / COLOR_B / COLOR_W
+    --
+    six values only - no PAN/TILT/
+    GOBO/ZOOM anywhere in the tree
+  }
+
+  struct DMXChannel <<live>> {
+    address : uint16_t
+    res : Resolution (Bit8 | Bit16)
+    MaxDMX() : uint16_t
+  }
+
+  struct DMXRange <<live>> {
+    from / to : uint32_t
+    Contains() / Normalize()
+  }
+
+  struct PhysicalRange <<live>> {
+    min / max : float
+    Normalize() / FromNormalized()
+  }
+
+  struct ChannelFunction <<live>> {
+    name : string
+    range_dmx : DMXRange
+    range_physical : PhysicalRange
+    Evaluate(dmx) : float
+  }
+
+  struct LogicalChannel <<live>> {
+    attribute : Attribute
+    channel : DMXChannel
+    functions : vector<ChannelFunction>
+  }
+
+  LogicalChannel *-- DMXChannel
+  LogicalChannel --> Attribute
+  LogicalChannel *-- ChannelFunction
+  ChannelFunction *-- DMXRange
+  ChannelFunction *-- PhysicalRange
+}
+
+' =============================================================================
+' Fixture - the runtime model. Owns no bytes; points into a universe buffer.
+' =============================================================================
+package "LightEngine::Fixtures" #F7F4FF {
+
+  struct FixtureTemplate <<live>> {
+    name : string
+    parameters : vector<ParameterConfig>
+  }
+
+  struct ParameterConfig <<live>> {
+    definition : shared_ptr<const LogicalChannel>
+    cellIndex : uint16_t
+  }
+
+  class Parameter <<live>> {
+    - m_def : shared_ptr<const LogicalChannel>
+    - m_bytes : uint8_t*        (non-owning)
+    - m_baseOffset : uint32_t
+    - m_cellIndex : uint16_t
+    --
+    Write(float 0..1)
+    WriteRaw(channel, dmx)
+    Bound() / Unbind()
+  }
+
+  class ColorCell <<live>> {
+    - m_r / m_g / m_b / m_w : Parameter*
+    - m_dimmer : Parameter*   (null => virtual dimmer)
+    - m_hsv : HSV
+    --
+    SetHueSat() / SetIntensity()
+    Resolve()  : HSV -> RGB (+ white)
+  }
+
+  class Fixture <<live>> {
+    - m_config : shared_ptr<FixtureTemplate>
+    - m_fid : uint16_t
+    - m_buffer : uint8_t*      (non-owning)
+    - m_parameters : vector<Parameter>
+    - m_byAttribute : map<Attribute, vector<Parameter*>>
+    - m_colorCells : vector<ColorCell>
+    --
+    Add(def, cell) / Build()
+    setStart() / setBuffer() / Bind()
+    **Resolve(FixtureValues)**  <- the frame sink
+    Fid() / SetFid()
+    --
+    still derives Utils::Fragment
+    (start/size) although universes
+    no longer use FragmentedStorage
+  }
+
+  FixtureTemplate *-- ParameterConfig
+  ParameterConfig --> LogicalChannel
+  Fixture *-- Parameter
+  Fixture *-- ColorCell
+  Fixture --> FixtureTemplate
+  ColorCell o-- Parameter
+  Parameter --> LogicalChannel
+}
+
+package "LightEngine::FixtureTools" #F7F4FF {
+
+  class ParameterCell <<setup>> {
+    - m_offset / m_cellIndex : uint16_t
+    - parameters : vector<ParameterConfig>
+    --
+    add8Bit(Attribute)
+    operator<<(Attribute)
+    setCellIndex() / get()
+  }
+
+  class FixtureBuilder <<inert>> {
+    ftemplate / cellIndex / relOffset
+    parCell : ParameterCell
+    --
+    create(name) / newCell()
+    addColorRed()  <- empty body
+    nothing constructs one
+  }
+
+  ParameterCell ..> ParameterConfig
+  FixtureBuilder *-- ParameterCell
+}
+
+' =============================================================================
+' DMX - universes and their byte buffers
+' =============================================================================
+package "LightEngine::DMX" #FFF9F0 {
+
+  class PatchInfo <<live>> {
+    start / size / id : uint32_t
+    --
+    copy ctor copies start+size
+    but **not** id (see D6)
+  }
+
+  class UniversePatch <<live>> {
+    - m_id : uint16_t
+    - m_buffer : array<uint8_t, 512>
+    - m_bytesPatched : array<uint16_t, 512>
+    - m_fragments : list<PatchInfo>
+    - m_fragIDCounter : uint16_t
+    --
+    add(size, start) / add(size)
+    addMultiple(size, start, n)
+    checkMultiple() / findFirstEmpty()
+    remove(fragID) / getInfo(id)
+    getRaw() / buffer() / clearBuffer()
+    fragmentsToString() / dump()
+  }
+
+  class FixtureGroup <<inert>> {
+    m_fixtures : vector<FixturePtr>
+    m_byAttribute / m_colorCells / m_fids
+    m_revision : uint64_t
+    --
+    the only type with revision()
+    superseded by Utils Interval;
+    still #included by EffectBase,
+    Layer, Pools::Group - never built
+  }
+
+  UniversePatch *-- PatchInfo
+}
+
+' =============================================================================
+' Engine::Components
+' =============================================================================
+package "LightEngine::Engine::Components" #F0FFF4 {
+
+  class FixtureLibrary <<setup>> {
+    - vendor.fixtures : map<string, Fixture>
+    --
+    find(name) : Fixture*
+    addDefaults()  <- one hardcoded
+    3-channel "RGB", built in the ctor
+  }
+
+  class Patch <<live>> {
+    - m_fixCurrentID : uint64_t
+    - m_fixtureByUID : map<uid, FixturePtr>
+    - m_fixtureStatus : map<uid, FixtureStatus>
+    - m_fixtureByFIDs : map<fid, vector<uid>>
+    - m_universes : map<uni, UniversePatch>
+    --
+    addFixtures(fixture, amount)
+    patch(uid, uni, addr)
+    patch(vector<uid>, uni, addr)
+    patch(Fixture*, uni, amount, start, startFID)
+    unpatch(uid) / unpatch(vector) / removeFixture()
+    **fixturesByFID(fid)**  <- used by update()
+    getFixture(uid) / sortedByAddress()
+    clearDMXBuffers() / universes()
+  }
+
+  struct FixtureStatus <<live>> {
+    universe : uint16_t
+    patchInfoID : uint32_t
+  }
+
+  struct FixPatch <<live>> {
+    universe : uint16_t
+    info : PatchInfo
+  }
+
+  class Programmer <<live>> {
+    - m_runningEffects : Effects::EffectGroup
+    - m_interval : Utils::Maths::Interval
+    --
+    select(Interval) / select(vector<fid>)
+    add(Interval) / add(vector<fid>)
+    setColor(RGB) / setIntensity(float)
+    addDimmerChase()
+    **apply(Frame&, TimeContext)**
+    clearAll() / selected()
+    --
+    NOT a Layer (only Stringify)
+    applyEffect() declared, never defined
+    toString() is an empty stub
+  }
+
+  class FixtureSelection <<inert>> {
+    m_interval : Interval
+    select() / add() / clear() / get()
+    --
+    byte-for-byte duplicate of the
+    selection code inside Programmer;
+    the member is commented out there
+  }
+
+  class Presets <<setup>> {
+    - m_groups : Pool<Pools::Group>
+    - m_colors : Pool<Pools::Color>
+    --
+    groups() / colors() / clear()
+    dimmer, sequence, effect pools
+    are commented out
+  }
+
+  Patch *-- UniversePatch
+  Patch *-- FixtureStatus
+  Patch ..> FixPatch
+  Patch o-- Fixture
+  FixtureLibrary o-- Fixture
+  FixtureLibrary ..> ParameterCell
+}
+
+' =============================================================================
+' Engine::Pools - numbered show objects
+' =============================================================================
+package "LightEngine::Engine::Pools" #F0F4FF {
+
+  abstract class PoolObject <<setup>> {
+    - m_number : uint32_t
+    - m_name : string
+    --
+    number() / name() / setName()
+    {abstract} toString()
+    friend Pool<T> -> setNumber()
+  }
+
+  class "Pool<T>" as PoolT <<setup>> {
+    - m_items : map<uint32_t, shared_ptr<T>>
+    - m_byName : map<string, uint32_t>
+    --
+    store() / emplace() / emplaceAt()
+    get(num) / get(name) / contains()
+    remove() / clear() / move() / rename()
+    nextFree() / items() / toString()
+  }
+
+  class Group <<setup>> {
+    - m_group : Interval
+    fixtureGroup() / fids()
+  }
+
+  class Color <<setup>> {
+    - m_effect : shared_ptr<StaticColor>
+    --
+    no accessor for m_effect, so the
+    stored colour cannot be read back;
+    toString() prints only number+name
+  }
+
+  PoolObject <|-- Group
+  PoolObject <|-- Color
+  PoolT o-- PoolObject
+  Presets *-- PoolT
+}
+
+' =============================================================================
+' Engine layers / frame
+' =============================================================================
+package "LightEngine::Engine (frame)" #FFF0F8 {
+
+  enum MergePolicy <<live>> {
+    HTP
+    LTP
+  }
+
+  struct FixtureValues <<live>> {
+    color : optional<HSV>
+    intensity : optional<float>
+    generic : map<Attribute, float>
+  }
+
+  class Frame <<live>> {
+    - m_values : map<fid, FixtureValues>
+    --
+    contribute(fid, values, policy)
+    get(fid) / all() / clear()
+    --
+    ONE shared frame for everything;
+    the policy comes from the effect
+  }
+
+  abstract class Layer <<inert>> {
+    Priority : ABOVE_PROG | PROG | HIGH | NORMAL | LOW
+    - m_priority : Priority
+    --
+    priority() / enabled()
+    {abstract} apply(Frame&, TimeContext)
+    --
+    EffectGroup is the only subclass;
+    Engine::m_layers is never filled
+  }
+
+  class StaticEffectHolder <<inert>> {
+    values : map<fid, FixtureValues>
+    onGroups : Interval
+    byType : map<EffectCategory, set<fid>>
+    --
+    setColor() / setIntensity()
+    getColor() / getIntensity()
+    --
+    the pre-effect way of holding
+    programmer state; commented out
+    of Programmer, still compiled
+  }
+
+  Frame *-- FixtureValues
+  Frame ..> MergePolicy
+  FixtureValues ..> Attribute
+}
+
+' =============================================================================
+' Effects
+' =============================================================================
+package "LightEngine::Effects" #FFFDF0 {
+
+  enum EffectType <<live>> {
+    STATIC
+    ANIMATED
+  }
+
+  enum EffectCategory <<live>> {
+    DIMMER
+    COLOR
+  }
+
+  abstract class EffectBase <<live>> {
+    # m_cache : vector<pair<fid, FixtureValues>>
+    # m_policy : MergePolicy
+    # m_dirty : bool
+    # m_cachedRevision : uint64_t   (dead)
+    # m_nextDue / m_phaseOrigin : double
+    --
+    {abstract} recompute(TimeContext, Interval)
+    emit(fid, values)
+    stepInterval() : double  (NEVER by default)
+    due(now, group) : m_dirty || now >= m_nextDue
+    evaluate() -> clear + recompute + scheduleNext
+    replay(Frame&) -> contribute cached pairs
+    markDirty() / syncPhase() / setEnabled()
+  }
+
+  abstract class EffectStatic <<live>> {
+    setCache(vals)
+    stepInterval() = NEVER
+  }
+
+  abstract class EffectAnimated <<live>> {
+    # m_curve : unique_ptr<Curve>
+    # m_bpm / m_spread : float
+    # m_steps : uint16_t
+    --
+    setBpm(bpm, now) -> syncPhase
+    setSpread() / setSteps()
+    stepInterval() = (60/bpm)/steps
+  }
+
+  class StaticColor <<live>> {
+    - m_color : RGB
+    setColor(RGB)
+    recompute() -> HSV, LTP
+  }
+
+  class StaticIntensity <<live>> {
+    - m_level : float
+    setLevel(float)
+    recompute() -> LTP
+  }
+
+  class DimmerChase <<live>> {
+    - m_type : Utils::Maths::Type
+    setCurve(type)
+    recompute() -> temporal phase
+    (bpm) x spatial phase (spread)
+    policy = HTP
+  }
+
+  struct EffectWrapper <<live>> {
+    group : Interval
+    effect : shared_ptr<EffectBase>
+    --
+    no id: nothing can address a
+    running effect afterwards
+  }
+
+  class EffectGroup <<live>> {
+    - applied : vector<shared_ptr<EffectWrapper>>
+    --
+    push<T>(group, args...)
+    pushRet<T>(group, args...) -> handle
+    lastEffect() / operator[] / getEffects()
+    apply(Frame&, TimeContext) : override
+    --
+    IS a Layer, but is driven as a
+    plain container by Programmer
+  }
+
+  class "Effects::Engine" as FxEngine <<inert>> {
+    - m_effects : vector<shared_ptr<EffectGroup>>
+    --
+    empty shell, no members declared
+  }
+
+  EffectBase <|-- EffectStatic
+  EffectBase <|-- EffectAnimated
+  EffectStatic <|-- StaticColor
+  EffectStatic <|-- StaticIntensity
+  EffectAnimated <|-- DimmerChase
+  EffectBase --> EffectType
+  EffectBase --> EffectCategory
+  EffectWrapper *-- EffectBase
+  EffectGroup *-- EffectWrapper
+  Layer <|-- EffectGroup
+  FxEngine o-- EffectGroup
+  EffectBase ..> Frame : replay()
+  EffectBase *-- FixtureValues
+}
+
+' =============================================================================
+' Output
+' =============================================================================
+package "LightEngine::Output" #F0FFFF {
+
+  class DMXOutput <<live>> {
+    - m_ip : Utils::Network::IP
+    - m_sourceName : string
+    - m_senders : map<uni, SacnSender>
+    --
+    ensureSender(uni)  (lazy)
+    send(UniversePatch)
+    sendAll(Patch&)   <- every universe, every frame
+    update(dirty, Patch&)  <- body commented out
+    --
+    sACN only; no protocol interface
+  }
+
+  DMXOutput ..> Patch
+  DMXOutput ..> UniversePatch
+}
+
+' =============================================================================
+' Top level
+' =============================================================================
+package "LightEngine::Engine (top)" #F8F8F8 {
+
+  struct Config <<live>> {
+    version / name : string
+    ip : Utils::Network::IP
+    output : bool
+  }
+
+  class Engine <<live>> {
+    - m_config : Config
+    - m_library : FixtureLibrary
+    - m_patch : Patch
+    - m_programmer : Programmer
+    - m_presets : Presets
+    - m_output : DMXOutput
+    - m_frame : Frame
+    - m_layers : vector<Layer*>   (never filled)
+    - m_time : TimeContext
+    --
+    **update(dt)** - see the pipeline note
+    storeGroup() / storeGroup(num)
+    addLayer(Layer*)  (never called)
+    patcher() / programmer() / presets()
+    fixtureLibrary() / time()
+    --
+    selectGroup / appendGroup /
+    storeColorPreset / recallColorPreset /
+    loadCommands / command  are all
+    commented out
+  }
+
+  Engine *-- Config
+  Engine *-- FixtureLibrary
+  Engine *-- Patch
+  Engine *-- Programmer
+  Engine *-- Presets
+  Engine *-- DMXOutput
+  Engine *-- Frame
+  Engine o-- Layer
+  Programmer *-- EffectGroup
+  Programmer *-- Frame : writes
+}
+
+' =============================================================================
+' Commands - declared, not implemented
+' =============================================================================
+package "LightEngine::Commands" #FFF0F0 {
+
+  class CommandParser <<missing>> {
+    forward-declared in Engine.h
+    no header, no source in this repo
+  }
+
+  class CommandExecutor <<missing>> {
+    forward-declared in Engine.h
+    no header, no source in this repo
+  }
+
+  class "synparser (lib/NewSyntaxParser)" as SynParser <<inert>> {
+    Tokenizer + Syntax/Grammar/Engine
+    --
+    built and linked into LightEngine,
+    but no LightEngine code includes it.
+    CMake bakes LE_DATA_DIR pointing at
+    include/LightEngine/Commands/data,
+    which does not exist
+  }
+
+  CommandParser ..> SynParser
+  CommandExecutor ..> Engine
+}
+
+' =============================================================================
+' Utils (external submodule)
+' =============================================================================
+package "Utils (lib/Utils)" #FAFAFA {
+
+  class Interval <<live>> {
+    m_bases : vector<IntervalBase>
+    m_cache : vector<uint64_t>
+    --
+    add(from,to) / add(value) / add(range)
+    operator|= / operator&
+    values() / size() / clear()
+    --
+    **no revision()** - membership
+    changes are invisible downstream
+  }
+
+  class TimeContext <<live>> {
+    now : double
+    dt : float
+    frame : uint64_t
+  }
+
+  class Curve <<live>> {
+    samples
+    getCurveByType(type, resolution)
+  }
+
+  class "RGB / HSV / Colors" as Colors <<live>> {
+    rgbToHsv() / hsvToRgb()
+  }
+
+  class Fragment <<live>> {
+    start / size : uint32_t
+    setStart()
+  }
+
+  class "FragmentedStorage<T,N>" as FragStore <<inert>> {
+    m_fragments / m_buffer / m_bytesPatched
+    add / addMultiple / checkMultiple
+    --
+    the allocator UniversePatch was
+    re-written from; nothing uses it
+  }
+
+  class SacnSender <<live>> {
+    begin(universe, ip)
+    setSourceName() / send(buffer)
+  }
+
+  class Logger <<live>> {
+    scope / level
+    debug / info / warn / error / success
+  }
+
+  class "Font / Theme / ColorFormatter" as Fmt <<live>> {
+    format() / group()
+    Theme::num/name/lbl/ok/err
+  }
+}
+
+Fixture --|> Fragment
+FragStore ..> Fragment
+EffectBase ..> Interval
+EffectBase ..> TimeContext
+EffectAnimated *-- Curve
+Programmer *-- Interval
+Group *-- Interval
+StaticColor ..> Colors
+ColorCell ..> Colors
+DMXOutput *-- SacnSender
+StaticEffectHolder ..> FixtureGroup
+FixtureGroup o-- Fixture
+
+' =============================================================================
+' The render tick, as it is actually coded
+' =============================================================================
+note as PIPE #E8F5E9
+  **Engine::update(dt) - what really happens**
+  1. m_time.now += dt; ++frame
+  2. m_patch.clearDMXBuffers()   - zero all 512-byte buffers
+  3. m_frame.clear()
+  4. (commented out) stable_sort(m_layers) + for each layer apply()
+     **m_programmer.apply(m_frame, m_time)**   - hard-wired, single layer
+     -> per EffectWrapper: due() ? evaluate() : - ; then replay(frame)
+  5. for each (fid, values) in m_frame.all():
+       for each fixture in m_patch.fixturesByFID(fid): fixture->Resolve(values)
+       -> ColorCell::Resolve() -> Parameter::Write() -> universe buffer
+  6. if (m_config.output) m_output.sendAll(m_patch)  - every universe, always
+end note
+PIPE .. Engine
+
+' =============================================================================
+' Defects and dead ends worth carrying on the diagram
+' =============================================================================
+note as D1 #FFCDD2
+  **D1 - only one patch path builds the FID index**
+  m_fixtureByFIDs and SetFid() are populated
+  only by patch(Fixture*, uni, amount, ...).
+  patch(uid,...), patch(vector<uid>,...) and
+  addFixtures() leave the fixture at fid 0 and
+  out of the index - so update() never finds it
+  and it never renders. The demo hits this the
+  moment it re-patches fixture 6.
+end note
+D1 .. Patch
+
+note as D2 #FFE0B2
+  **D2 - the layer stack is inert**
+  Layer/Priority exist, EffectGroup implements
+  apply(), but m_layers is never filled and the
+  compose loop is commented out. Programmer is
+  not a Layer and duplicates EffectGroup::apply()
+  instead of delegating to it. Nothing can be
+  composed above or below the programmer yet.
+end note
+D2 .. Layer
+
+note as D3 #FFE0B2
+  **D3 - running effects are unaddressable**
+  EffectWrapper has no id and Programmer throws
+  away the pushRet() handle, so setBpm(),
+  setCurve() and setColor() are unreachable once
+  an effect is pushed. Every set* also pushes a
+  NEW static instead of updating the existing one
+  for that (selection, category) - the stack only
+  ever grows.
+end note
+D3 .. EffectWrapper
+
+note as D4 #FFE0B2
+  **D4 - selection changes never invalidate**
+  EffectBase's revision check is commented out
+  because Utils Interval has no revision().
+  m_cachedRevision is dead. Regroup a selection
+  and every cached effect output goes stale
+  until something else marks it dirty.
+end note
+D4 .. Interval
+
+note as D5 #FFE0B2
+  **D5 - two allocators, one used**
+  Utils::FragmentedStorage<T,512> and
+  UniversePatch implement the same packing
+  algorithm. Universes use UniversePatch;
+  Fixture still inherits Utils::Fragment purely
+  for start/size. FixtureGroup, StaticEffectHolder
+  and FixtureSelection are the same story on the
+  selection side: three ways to say "these fids".
+end note
+D5 .. UniversePatch
+
+note as D6 #FFE0B2
+  **D6 - PatchInfo copy ctor drops id**
+  The hand-written copy ctor copies start and
+  size only, so getInfo()/patchInfo() hand back
+  info.id == 0. Harmless today (unpatch reads the
+  id from FixtureStatus) but it is a trap for any
+  future caller of patchInfo().
+  Also: there is no repatch() - patch() refuses an
+  already-patched fixture, and setStart() alone
+  would leave it writing into the old buffer.
+end note
+D6 .. PatchInfo
+
+note as D7 #FFE0B2
+  **D7 - output is unconditional**
+  sendAll() re-sends every universe every frame;
+  DMXOutput::update(dirty, patch) - the selective
+  path - has its body commented out and Patch has
+  no dirty set. Nothing tracks that a frame was a
+  no-op, even though every effect can now report
+  due-ness.
+end note
+D7 .. DMXOutput
+
+note as D8 #E1F5FE
+  **Archive kept in the tree**
+  preComponents/  - Patch + Universe, 100% commented out
+  old/            - previous Effects/Pools generation
+                    (EffectSpec, EffectFactory, Stored),
+                    still the only place a serializable
+                    effect Spec exists.
+  Neither is in the CMake globs.
+end note
+
+@enduml

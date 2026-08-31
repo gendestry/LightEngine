@@ -22,8 +22,8 @@
 using namespace LightEngine;
 using Utils::Maths::Interval;
 
-#ifndef LE_DATA_DIR
-#define LE_DATA_DIR "include/LightEngine/Commands/Default/data"
+#ifndef DEFAULT_DATA_DIR
+#define DEFAULT_DATA_DIR "include/LightEngine/Commands/Default/data"
 #endif
 
 namespace
@@ -47,15 +47,29 @@ int main()
     logger.setLevel(Utils::Logger::DEBUGGING);
 
     Engine::Engine engine;
-    engine.loadCommands(LE_DATA_DIR "/default.tok", LE_DATA_DIR "/default.syn");
+    engine.loadCommands(DEFAULT_DATA_DIR "/default.tok", DEFAULT_DATA_DIR "/default.syn");
 
-    // ---- patch --------------------------------------------------------
-    // 30 RGB fixtures on universe 1, FIDs 1-30, 3 DMX channels apart.
-    // heading("Patch");
     auto &lib = engine.fixtureLibrary();
     auto rgb = lib.find("RGB");
     auto &patch = engine.patcher();
-    patch.patch(rgb, /*universe*/ 1, /*amount*/ 30, /*start*/ 1, /*startFID*/ 1);
+    patch.patch(rgb, /*universe*/ 8, /*amount*/ 93);
+    patch.patch(rgb, /*universe*/ 9, /*amount*/ 120);
+    patch.patch(rgb, /*universe*/ 10, /*amount*/ 60);
+
+    std::string line;
+    while (std::getline(std::cin, line))
+    {
+        if (!engine.command(line))
+        {
+            std::cout << "  parse error\n";
+            continue;
+        }
+        engine.update();
+    }
+    // ---- patch --------------------------------------------------------
+    // 30 RGB fixtures on universe 1, FIDs 1-30, 3 DMX channels apart.
+    // heading("Patch");
+
     // std::cout << "Patched 30 RGB fixtures on universe 1 (fid 1-30)\n";
 
     const Interval group1 = range(1, 10);

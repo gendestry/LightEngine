@@ -1,0 +1,965 @@
+@startuml LightEngineProposed
+' =============================================================================
+'  LightEngine - PROPOSED architecture.
+'
+'  Companion: architecture-current.puml (what the `cleanup` branch actually is)
+'
+'  This is not a rewrite. It is the current design carried to its conclusion:
+'  the decisions already written down in docs/effect-stack-design.md,
+'  docs/effect-scheduling.md and docs/ENGINE.md, plus the seams that the
+'  defects D1-D7 in architecture-current.puml are asking for.
+'
+'  Five moves define it:
+'    1. ONE selection type, ONE allocator, ONE way to say "these fixtures".
+'    2. Effects get identity (EffectId) and a serializable Spec, so a running
+'       effect can be edited, stored and recalled.
+'    3. EffectStack becomes the universal brick - programmer, cue and stored
+'       effect are the same structure.
+'    4. Merge policy moves off the effect and onto the layer: layers render to
+'       private frames, the Compositor folds them by priority + MergeConfig.
+'    5. Everything outside the render loop (network, parser, files, clock) sits
+'       behind a port, so the core can be driven headlessly in a test.
+' =============================================================================
+
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam nodesep 30
+skinparam ranksep 45
+skinparam shadowing false
+hide empty members
+
+skinparam class {
+  BackgroundColor<<keep>>   #B6E7B0
+  BorderColor<<keep>>       #2E7D32
+  BackgroundColor<<change>> #BBDEFB
+  BorderColor<<change>>     #1565C0
+  BackgroundColor<<new>>    #FFE7A3
+  BorderColor<<new>>        #F9A825
+  BackgroundColor<<port>>   #E1BEE7
+  BorderColor<<port>>       #6A1B9A
+  BackgroundColor<<gone>>   #E0E0E0
+  BorderColor<<gone>>       #757575
+}
+
+legend top left
+  <back:#B6E7B0>  keep as is  </back>  <back:#BBDEFB>  exists, changes shape  </back>  <back:#FFE7A3>  new  </back>
+  <back:#E1BEE7>  port (interface owned by the core)  </back>  <back:#E0E0E0>  deleted / folded away  </back>
+endlegend
+
+' =============================================================================
+' DEFINITION LAYER - what a fixture *is*. Pure data, no runtime state.
+' =============================================================================
+package "Definition  (LightEngine::GDTF)" #F4F9FF {
+
+  enum Attribute <<change>> {
+    DIMMER / SHUTTER / STROBE
+    COLOR_R / _G / _B / _W / _A / _UV
+    COLOR_HUE / COLOR_SAT / CTO
+    PAN / TILT / PAN_ROT / TILT_ROT
+    ZOOM / FOCUS / IRIS / FROST
+    GOBO1 / GOBO1_POS / PRISM
+    --
+    today: 6 values. The whole
+    console is boxed in by this.
+  }
+
+  enum AttributeCategory <<new>> {
+    INTENSITY
+    COLOR
+    POSITION
+    BEAM
+    CONTROL
+  }
+
+  class Classifier <<new>> {
+    {static} categoryOf(Attribute) : AttributeCategory
+    {static} isColorComponent(Attribute)
+    --
+    the single table that says which
+    slot an attribute merges into and
+    which preset pool can hold it
+  }
+
+  struct LogicalChannel <<keep>> {
+    attribute : Attribute
+    channel : DMXChannel
+    functions : vector<ChannelFunction>
+  }
+
+  struct DMXChannel <<keep>> {
+    address / res / MaxDMX()
+  }
+
+  struct ChannelFunction <<keep>> {
+    range_dmx / range_physical
+    Evaluate()
+  }
+
+  class DMXMode <<new>> {
+    name : string
+    footprint : uint16_t
+    channels : vector<ParameterConfig>
+    cells : vector<CellDef>
+  }
+
+  class FixtureType <<new>> {
+    manufacturer / name / guid
+    modes : vector<DMXMode>
+    --
+    what a .gdtf actually parses into;
+    FixtureTemplate becomes the
+    (type, mode) pair chosen at patch
+  }
+
+  Attribute --> AttributeCategory
+  Classifier ..> Attribute
+  LogicalChannel --> Attribute
+  LogicalChannel *-- DMXChannel
+  LogicalChannel *-- ChannelFunction
+  FixtureType *-- DMXMode
+  DMXMode ..> LogicalChannel
+}
+
+' =============================================================================
+' FIXTURE RUNTIME - stateless sinks pointing into a universe buffer.
+' =============================================================================
+package "Fixture runtime  (LightEngine::Fixtures)" #F7F4FF {
+
+  class Parameter <<keep>> {
+    m_def / m_bytes / m_baseOffset / m_cellIndex
+    Write(float 0..1)
+  }
+
+  class Cell <<change>> {
+    - m_params : map<Attribute, Parameter*>
+    - m_state : CellState
+    --
+    Resolve()
+    --
+    ColorCell generalised: one cell is
+    one geometry reference, holding
+    whatever attributes it has, not
+    just R/G/B/W+dimmer. The virtual
+    dimmer rule stays exactly here.
+  }
+
+  class Fixture <<change>> {
+    - m_type / m_mode
+    - m_fid : uint16_t
+    - m_buffer : uint8_t*
+    - m_parameters / m_byAttribute / m_cells
+    --
+    Resolve(const FixtureValues&)
+    --
+    no longer derives Utils::Fragment:
+    placement is the Patch's business,
+    not the fixture's (see PatchLocation)
+  }
+
+  class FixtureBuilder <<change>> {
+    create(name)
+    cell(index) / add8(Attribute) / add16(Attribute)
+    build() : FixtureType
+    --
+    finished, and demoted to what it
+    should be: the source of test and
+    built-in fixtures, not of the library
+  }
+
+  Fixture *-- Parameter
+  Fixture *-- Cell
+  Cell o-- Parameter
+  Fixture --> FixtureType
+  FixtureBuilder ..> FixtureType
+}
+
+' =============================================================================
+' PATCH - fixtures, universes, addresses. The only owner of live fixtures.
+' =============================================================================
+package "Patch  (LightEngine::Patching)" #FFF9F0 {
+
+  struct PatchLocation <<new>> {
+    universe : uint16_t
+    start : uint32_t
+    fragmentId : uint32_t
+    --
+    replaces FixtureStatus + FixPatch
+    and the start/size on Fixture
+  }
+
+  class FixtureInstance <<new>> {
+    uid : uint64_t      (identity, never reused)
+    fid : uint16_t      (what the operator types)
+    fixture : shared_ptr<Fixture>
+    location : optional<PatchLocation>
+    --
+    one place that knows all three
+    names for the same light
+  }
+
+  class Patch <<change>> {
+    - m_instances : map<uid, FixtureInstance>
+    - m_byFid : map<fid, vector<uid>>
+    - m_universes : map<uni, UniversePatch>
+    - m_dirty : set<uint16_t>
+    --
+    add(type, mode, amount) : vector<uid>
+    patch(uids, uni, addr) : Result
+    **repatch(uid, uni, addr)**  - unwire, move, rewire
+    unpatch(uids) / remove(uids)
+    setFid(uid, fid) / byFid(fid) / byUid(uid)
+    resolve(Selection) : span<FixtureInstance*>
+    dirtyUniverses() / clearDirty()
+    --
+    INVARIANT: every path that creates,
+    moves or destroys an instance goes
+    through one private reindex() - the
+    fid index can never be half-built
+    again (fixes D1)
+  }
+
+  class UniversePatch <<change>> {
+    m_id / m_buffer[512] / m_bytesPatched[512]
+    m_fragments : list<PatchInfo>
+    --
+    add / addMultiple / remove
+    checkMultiple / getInfo
+    getRaw / buffer / clearBuffer
+    --
+    the ONE allocator. Utils::
+    FragmentedStorage is deleted, and
+    PatchInfo's copy ctor is fixed or
+    removed (fixes D5, D6)
+  }
+
+  struct PatchInfo <<change>> {
+    start / size / id
+    = default copy / move
+  }
+
+  Patch *-- FixtureInstance
+  Patch *-- UniversePatch
+  FixtureInstance *-- PatchLocation
+  FixtureInstance o-- Fixture
+  UniversePatch *-- PatchInfo
+}
+
+' =============================================================================
+' SELECTION - one type, with a revision. Kills three duplicates.
+' =============================================================================
+package "Selection  (LightEngine::Selection)" #F3F0FF {
+
+  class Selection <<new>> {
+    - m_fids : Utils::Maths::Interval
+    - m_revision : uint64_t
+    - m_order : SpatialOrdering
+    --
+    select() / add() / sub() / clear()
+    fids() : span<const uint16_t>
+    **revision()** - bumped on every change
+    ordered() : span<const uint16_t>
+    --
+    replaces Programmer::m_interval,
+    Components::FixtureSelection and
+    DMX::FixtureGroup - one type, and
+    the revision that effect caches
+    have been waiting for (fixes D4)
+  }
+
+  class SpatialOrdering <<new>> {
+    kind : FORWARD | REVERSE | IN_OUT |
+           OUT_IN | BLOCKS | WINGS | RANDOM
+    blockSize / wings / seed
+    --
+    apply(span<fid>) : span<index>
+    --
+    the spatial index every animated
+    effect walks; written once, shared
+    by all of them
+  }
+
+  Selection *-- SpatialOrdering
+}
+
+' =============================================================================
+' VALUES AND FRAME - what a layer produces, and how layers combine.
+' =============================================================================
+package "Frame  (LightEngine::Engine)" #FFF0F8 {
+
+  class Value <<new>> {
+    absolute : float
+    ref : optional<PresetRef>
+    --
+    a layer stores either a number or a
+    pointer at a preset. The Compositor
+    dereferences refs EVERY frame, so
+    editing a preset live-updates every
+    cue and playback that points at it
+  }
+
+  struct FixtureValues <<change>> {
+    intensity : optional<Value>
+    color : optional<ColorValue>     (HSV or ref)
+    position : optional<PositionValue>
+    beam : map<Attribute, Value>
+    --
+    per-category slots instead of one
+    generic map, because merge policy,
+    preset pools and clear-scoping are
+    all per category
+  }
+
+  class Frame <<change>> {
+    - m_values : vector<FixtureValues> indexed by fid
+    --
+    contribute(fid, values)
+    get(fid) / all() / reset()
+    --
+    reset() clears in place; a layer
+    owns its own Frame now, so
+    contribute() no longer takes a
+    policy - the layer holds it
+  }
+
+  enum MergePolicy <<keep>> {
+    HTP
+    LTP
+  }
+
+  struct MergeConfig <<new>> {
+    priority : Priority
+    intensity : MergePolicy = HTP
+    color : MergePolicy = LTP
+    position : MergePolicy = LTP
+    beam : MergePolicy = LTP
+    --
+    the exec's option page: this is
+    what makes "park this playback
+    above the programmer" expressible
+  }
+
+  class Compositor <<new>> {
+    fold(span<Layer*>, Frame& master)
+    --
+    per fixture, per category:
+      LTP  -> highest-priority layer
+              holding a value wins
+      HTP  -> highest priority TIER
+              holding any value, then
+              max WITHIN that tier
+    then resolves every PresetRef
+    through the PresetResolver
+  }
+
+  class Renderer <<new>> {
+    resolve(const Frame&, Patch&)
+    --
+    merge-walks the frame against the
+    fid index (both sorted) instead of
+    a map lookup per fixture, then
+    Fixture::Resolve() per instance
+  }
+
+  Frame *-- FixtureValues
+  FixtureValues *-- Value
+  MergeConfig --> MergePolicy
+  Compositor ..> Frame
+  Compositor ..> MergeConfig
+  Renderer ..> Frame
+  Renderer ..> Patch
+}
+
+' =============================================================================
+' LAYERS - each renders into its own frame. Programmer is just one of them.
+' =============================================================================
+package "Layers  (LightEngine::Engine)" #F0FFF4 {
+
+  abstract class Layer <<change>> {
+    # m_frame : Frame          (private, reused)
+    # m_merge : MergeConfig
+    # m_enabled : bool
+    --
+    {abstract} **render(TimeContext) : const Frame&**
+    {abstract} changed() : bool
+    merge() / setMerge() / priority()
+    --
+    apply(Frame&, TimeContext) is gone:
+    a layer never writes into a shared
+    frame again (fixes D2)
+  }
+
+  enum Priority <<keep>> {
+    ABOVE_PROG = 40
+    PROG = 30
+    HIGH = 20
+    NORMAL = 10
+    LOW = 0
+  }
+
+  class ProgrammerLayer <<change>> {
+    - m_selection : Selection
+    - m_stacks : vector<EffectStack>
+    --
+    select() / addSelect() / deselect()
+    set(Attribute, value) / setColor() / setIntensity()
+    addEffect(EffectSpec) : EffectId
+    edit(EffectId) : EffectBase*
+    clearValues() / clearAll()
+    snapshot() : EffectStack     (for store)
+    render(TimeContext) : const Frame&
+    --
+    a selection change opens a new
+    stack; a set lands in the current
+    one and REPLACES the same
+    (category, target) static instead of
+    stacking a new one (fixes D3)
+  }
+
+  class PlaybackLayer <<new>> {
+    - m_sequence : shared_ptr<Sequence>
+    - m_cursor : CueCursor  (from, target, elapsed)
+    --
+    go() / back() / goto(cue) / release()
+    fade(dt) - crossfade between cues
+    render(TimeContext) : const Frame&
+    --
+    same brick as the programmer: a cue
+    IS an EffectStack. MergeConfig is
+    its option page (above/below prog,
+    HTP or LTP per category)
+  }
+
+  Layer <|-- ProgrammerLayer
+  Layer <|-- PlaybackLayer
+  Layer --> Priority
+  Layer *-- MergeConfig
+  Layer *-- Frame
+  ProgrammerLayer *-- Selection
+}
+
+' =============================================================================
+' EFFECTS - addressable, serializable, category-tagged.
+' =============================================================================
+package "Effects  (LightEngine::Effects)" #FFFDF0 {
+
+  class EffectStack <<new>> {
+    - id : StackId
+    - selection : Selection       (snapshot at open)
+    - effects : vector<EffectHandle>
+    - m_composed : Frame          (per-stack cache)
+    - m_revision : uint64_t
+    - enabled : bool
+    --
+    push(EffectSpec) : EffectId
+    find(EffectId) / erase(EffectId)
+    compose(TimeContext) : const Frame&
+    dirty() : any effect due || selection moved
+    --
+    THE universal brick: programmer
+    block, cue body, stored effect.
+    Its compose cache is what lets a
+    still show cost nothing
+  }
+
+  struct EffectHandle <<new>> {
+    id : EffectId       (stable, pool-unique)
+    effect : shared_ptr<EffectBase>
+    --
+    replaces EffectWrapper. The group
+    moved up to the stack; the id is
+    what a command line addresses
+  }
+
+  abstract class EffectBase <<change>> {
+    # m_cache : vector<pair<fid, FixtureValues>>
+    # m_dirty / m_nextDue / m_phaseOrigin
+    # m_cachedRevision : uint64_t   (now live)
+    --
+    {abstract} recompute(TimeContext, Selection)
+    {abstract} **spec() : EffectSpec**
+    {abstract} category() : AttributeCategory
+    due() / evaluate() / replay()
+    markDirty() / syncPhase()
+    --
+    m_policy is GONE: a merge policy is
+    a property of the layer, not of the
+    effect. due() compares the
+    selection revision again.
+  }
+
+  abstract class EffectStatic <<keep>> {
+    stepInterval() = NEVER
+  }
+
+  abstract class EffectAnimated <<change>> {
+    m_curve / m_bpm / m_spread / m_steps
+    m_ordering : SpatialOrdering
+    m_amplitude : Amplitude
+    setBpm(bpm, now) / setSpread() / setSteps()
+    stepInterval()
+  }
+
+  struct Amplitude <<new>> {
+    low / high : float
+    size : float
+    --
+    clamps every animated effect gets
+    for free instead of per subclass
+  }
+
+  class AttributeStatic <<new>> {
+    attr : Attribute
+    value : Value
+    --
+    one class replacing StaticColor and
+    StaticIntensity, and covering pan,
+    zoom, gobo... the day the Attribute
+    enum grows
+  }
+
+  class AttributeChase <<new>> {
+    attr : Attribute
+    curve / phase per fixture
+    --
+    likewise replaces DimmerChase and
+    every "XChase" that would follow
+  }
+
+  class ColorRainbow <<new>> {
+    hue sweep over the ordered selection
+  }
+
+  class Strobe <<new>> {
+    quantised on/off, rate + duty
+  }
+
+  class PositionEffect <<new>> {
+    circle / figure-8 / fan over pan+tilt
+  }
+
+  struct EffectSpec <<new>> {
+    kind : EffectKind
+    attr : Attribute
+    curve / bpm / spread / steps
+    amplitude / ordering
+    values : variant<float, HSV, PresetRef>
+    --
+    the serializable description. Store
+    writes it, recall rebuilds from it,
+    the UI renders it, an undo stack
+    diffs it. Effect::spec() emits it -
+    one representation, both directions
+  }
+
+  class EffectFactory <<new>> {
+    {static} build(EffectSpec) : shared_ptr<EffectBase>
+    --
+    the single construction path for
+    both a live edit and a cue recall
+  }
+
+  EffectBase <|-- EffectStatic
+  EffectBase <|-- EffectAnimated
+  EffectStatic <|-- AttributeStatic
+  EffectAnimated <|-- AttributeChase
+  EffectAnimated <|-- ColorRainbow
+  EffectAnimated <|-- Strobe
+  EffectAnimated <|-- PositionEffect
+  EffectAnimated *-- Amplitude
+  EffectAnimated *-- SpatialOrdering
+  EffectStack *-- EffectHandle
+  EffectStack *-- Selection
+  EffectStack *-- Frame
+  EffectHandle *-- EffectBase
+  EffectFactory ..> EffectSpec
+  EffectFactory ..> EffectBase
+  EffectBase ..> EffectSpec
+  EffectBase --> AttributeCategory
+  ProgrammerLayer *-- EffectStack
+  PlaybackLayer ..> EffectStack
+}
+
+' =============================================================================
+' SHOW - everything the operator numbers, in one owner that can be serialized.
+' =============================================================================
+package "Show  (LightEngine::Show)" #F0F4FF {
+
+  class Show <<change>> {
+    groups : Pool<Group>
+    intensity / color / position / beam : Pool<Preset>
+    effects : Pool<EffectPreset>
+    sequences : Pool<Sequence>
+    --
+    Presets renamed and completed: it is
+    the show file, not a preset bag
+  }
+
+  class "Pool<T>" as PoolT <<keep>> {
+    store / emplace / emplaceAt
+    get(num) / get(name)
+    remove / move / rename / nextFree
+  }
+
+  abstract class PoolObject <<keep>> {
+    m_number / m_name
+    toString()
+  }
+
+  class Group <<keep>> {
+    m_selection : Selection
+    fids()
+  }
+
+  class "Preset<Cat>" as PresetT <<new>> {
+    - m_values : map<fid, FixtureValues>
+    - m_category : AttributeCategory
+    - m_global : bool   (all-fixture vs per-fixture)
+    --
+    values() / apply(EffectStack&)
+    --
+    ONE templated preset object with a
+    category tag, replacing Pools::Color
+    and the Dimmer/Position/Beam classes
+    that would have followed it
+  }
+
+  struct PresetRef <<new>> {
+    category : AttributeCategory
+    number : uint32_t
+    --
+    what a layer stores instead of a
+    number, so preset edits propagate
+  }
+
+  class PresetResolver <<new>> {
+    resolve(PresetRef, fid) : optional<Value>
+    --
+    the Compositor's hook into the show
+  }
+
+  class Cue <<new>> {
+    number / name
+    fadeIn / fadeOut / delay
+    body : EffectStack
+    --
+    a cue is a stored EffectStack plus
+    times. Nothing new to compose.
+  }
+
+  class Sequence <<new>> {
+    cues : Pool<Cue>
+    go() / back() / goto()
+  }
+
+  class EffectPreset <<new>> {
+    body : EffectStack
+    stored, recallable effect block
+  }
+
+  PoolObject <|-- Group
+  PoolObject <|-- PresetT
+  PoolObject <|-- Sequence
+  PoolObject <|-- EffectPreset
+  PoolObject <|-- Cue
+  PoolT o-- PoolObject
+  Show *-- PoolT
+  Sequence *-- Cue
+  Cue *-- EffectStack
+  EffectPreset *-- EffectStack
+  Group *-- Selection
+  PresetT --> AttributeCategory
+  PresetRef --> AttributeCategory
+  PresetResolver ..> PresetT
+  PresetResolver ..> PresetRef
+  Value ..> PresetRef
+  Compositor ..> PresetResolver
+}
+
+' =============================================================================
+' PORTS - the core declares them, the outside implements them.
+' =============================================================================
+package "Ports  (LightEngine::Ports)" #F6EDFA {
+
+  interface IDmxSink <<port>> {
+    {abstract} send(uint16_t universe, span<const uint8_t> frame)
+    {abstract} flush()
+  }
+
+  interface IClock <<port>> {
+    {abstract} now() : double
+    {abstract} sleepUntil(double)
+  }
+
+  interface IFixtureLibrary <<port>> {
+    {abstract} find(manufacturer, name) : FixtureType*
+    {abstract} modes(FixtureType) : span<DMXMode>
+  }
+
+  interface IShowStore <<port>> {
+    {abstract} save(const Show&, path)
+    {abstract} load(path) : Show
+  }
+}
+
+package "Adapters  (LightEngine::Adapters)" #FDF6FF {
+
+  class SacnSink <<change>> {
+    one SacnSender per universe
+    (today's DMXOutput, behind the port)
+  }
+
+  class ArtNetSink <<new>> {
+    Art-Net alternative
+  }
+
+  class RecordingSink <<new>> {
+    captures frames in memory
+    -> lets the whole render path be
+       asserted in a unit test
+  }
+
+  class SystemClock <<new>> {
+    steady_clock
+  }
+
+  class ManualClock <<new>> {
+    advance(dt) - deterministic tests
+  }
+
+  class GdtfLibrary <<new>> {
+    reads .gdtf (zip + XML)
+    -> FixtureType / DMXMode
+  }
+
+  class BuiltinLibrary <<change>> {
+    the hardcoded RGB and friends,
+    built through FixtureBuilder
+  }
+
+  class JsonShowStore <<new>> {
+    Show <-> file, via EffectSpec
+  }
+
+  IDmxSink <|.. SacnSink
+  IDmxSink <|.. ArtNetSink
+  IDmxSink <|.. RecordingSink
+  IClock <|.. SystemClock
+  IClock <|.. ManualClock
+  IFixtureLibrary <|.. GdtfLibrary
+  IFixtureLibrary <|.. BuiltinLibrary
+  IShowStore <|.. JsonShowStore
+  GdtfLibrary ..> FixtureType
+}
+
+' =============================================================================
+' ENGINE - the orchestrator, now thin.
+' =============================================================================
+package "Engine core  (LightEngine::Engine)" #F8F8F8 {
+
+  class Engine <<change>> {
+    - m_patch : Patch
+    - m_show : Show
+    - m_layers : vector<Layer*>   (sorted once, on add)
+    - m_programmer : ProgrammerLayer
+    - m_compositor : Compositor
+    - m_renderer : Renderer
+    - m_master : Frame
+    - m_sink : IDmxSink&
+    - m_clock : IClock&
+    --
+    **dispatch(Command) : CommandResult**
+    **update(dt)** - see the tick note
+    addLayer(Layer*) / layers()
+    state() : EngineState     (read model for UIs)
+    patch() / show() / programmer()
+  }
+
+  class OutputStage <<change>> {
+    - m_sink : IDmxSink&
+    - m_lastSent : map<uni, seq>
+    --
+    send(Patch&) - dirty universes only,
+    plus a keepalive resend at a fixed
+    interval, as a real sACN source does
+    (fixes D7)
+  }
+
+  class RenderLoop <<new>> {
+    - m_nextWake : double
+    --
+    tick()
+    --
+    if no layer changed() and now <
+    min(nextDue) across all effects, the
+    frame is a no-op: skip blackout,
+    compose and resolve, and let the
+    OutputStage keepalive carry it.
+    An idle show costs approximately
+    nothing; a chase costs its own
+    recomputes and no more.
+  }
+
+  struct EngineState <<new>> {
+    selection / stacks / pools / patch view
+    --
+    a read model the console and any UI
+    render from, so no front-end reaches
+    into engine internals
+  }
+
+  Engine *-- Patch
+  Engine *-- Show
+  Engine *-- Compositor
+  Engine *-- Renderer
+  Engine *-- OutputStage
+  Engine *-- RenderLoop
+  Engine o-- Layer
+  Engine *-- ProgrammerLayer
+  Engine ..> EngineState
+  Engine --> IClock
+  OutputStage --> IDmxSink
+  Engine ..> IFixtureLibrary
+  Show ..> IShowStore
+}
+
+' =============================================================================
+' COMMANDS AND FRONT-ENDS - one inbound door.
+' =============================================================================
+package "Api  (LightEngine::Api)" #FFF0F0 {
+
+  struct Command <<new>> {
+    variant<Select, AddSelect, Patch, Unpatch,
+            SetAttribute, AddEffect, EditEffect,
+            Store, Recall, Go, Release, Clear>
+    --
+    serializable, so the same value
+    comes from the keypad, a macro, a
+    test, an OSC packet or a replay log
+  }
+
+  struct CommandResult <<new>> {
+    ok : bool
+    message : string
+    payload : variant<...>
+  }
+
+  class CommandParser <<new>> {
+    grammar + tokens (synparser)
+    parse(line) : vector<Command>
+    --
+    the forward declaration in Engine.h
+    finally gets a body, and lives OUT
+    here - the core never links a parser
+  }
+
+  class ConsoleUI <<new>> {
+    patch view / fixture sheet
+    effect editor / pool grids
+    renders EngineState, emits Command
+  }
+
+  class OscBridge <<new>> {
+    external control surface
+  }
+
+  CommandParser ..> Command
+  ConsoleUI ..> Command
+  OscBridge ..> Command
+  Command ..> Engine : dispatch()
+  ConsoleUI ..> EngineState
+}
+
+' =============================================================================
+' WHAT DISAPPEARS
+' =============================================================================
+package "Deleted / folded away" #EEEEEE {
+  class "DMX::FixtureGroup" as XFG <<gone>> {
+    -> Selection
+  }
+  class "Components::FixtureSelection" as XFS <<gone>> {
+    -> Selection
+  }
+  class "Engine::StaticEffectHolder" as XSEH <<gone>> {
+    -> EffectStack
+  }
+  class "Effects::Engine" as XFXE <<gone>> {
+    -> EffectStack + layers
+  }
+  class "Effects::EffectWrapper" as XEW <<gone>> {
+    -> EffectHandle
+  }
+  class "Utils::FragmentedStorage" as XFS2 <<gone>> {
+    -> UniversePatch only
+  }
+  class "EffectBase::m_policy" as XPOL <<gone>> {
+    -> Layer::MergeConfig
+  }
+  class "Pools::Color" as XCOL <<gone>> {
+    -> Preset<COLOR>
+  }
+  class "preComponents/ + old/" as XARCH <<gone>> {
+    delete once EffectSpec is
+    ported out of old/
+  }
+}
+
+' =============================================================================
+' The render tick, proposed
+' =============================================================================
+note as TICK #E8F5E9
+  **Engine::update(dt) - two-pass**
+  1. now = clock.now(); advance TimeContext
+  2. **short-circuit**: if no layer changed() and now < min(nextDue),
+     skip to 6 - the master frame and every DMX buffer are already correct
+  3. **render**: each layer composes its OWN frame
+       stack.compose() -> per effect: due() ? evaluate() : cached, then replay
+       a stack whose effects were all cached returns its cached frame untouched
+  4. **fold**: Compositor merges layer frames low -> high into the master frame,
+     per category, using each layer's MergeConfig; PresetRefs resolved here
+  5. **resolve**: Renderer merge-walks master frame x fid index ->
+     Fixture::Resolve() -> Cell::Resolve() -> Parameter::Write() -> buffer
+  6. **output**: OutputStage sends dirty universes + keepalive via IDmxSink
+  7. nextWake = min(nextDue) across all effects -> the loop sleeps on a timer,
+     not on a fixed 25 ms
+end note
+TICK .. Engine
+
+note as FOLD #E3F2FD
+  **Why the fold rule is what it is**
+  LTP per category: the highest-priority layer holding a value wins outright -
+  grab a fixture on the programmer and it overrides a running cue; release it
+  and the cue shows through, untouched, because the cue never lost its value.
+  HTP per category: find the highest priority TIER with any value, take the max
+  WITHIN that tier, ignore lower tiers. Priority beats HTP - that is what makes
+  "park this playback above the programmer" mean something, and it is the
+  behaviour MA and ChamSys operators already have in their hands.
+end note
+FOLD .. Compositor
+
+note as DEP #F3E5F5
+  **The dependency rule**
+  Definition -> Fixture -> Patch -> Frame/Layers/Effects -> Show -> Engine.
+  Arrows point one way. The core names no socket, no file, no parser: it
+  declares IDmxSink, IClock, IFixtureLibrary, IShowStore and someone else
+  implements them. Make it a link-time rule, not a convention: a core CMake
+  target that links neither Utils::Network nor synparser cannot regress.
+  The payoff is not purity - it is that RecordingSink + ManualClock let you
+  assert "chase at 120 BPM, frame 37, fixture 12 = 0.71" in a unit test.
+end note
+
+note as ORDER #FFF8E1
+  **A sane order to get there**
+  1. Selection (+ Interval revision) - deletes FixtureGroup, FixtureSelection,
+     StaticEffectHolder and fixes stale caches in one move.
+  2. Patch reindex invariant + repatch() - D1 and D6, small and self-contained.
+  3. EffectId / EffectHandle / EffectStack - unblocks editing a running effect.
+  4. EffectSpec + EffectFactory (port from old/) - unblocks store and recall,
+     and therefore Preset<Cat>, Cue and Sequence.
+  5. Layer::render() + MergeConfig + Compositor - the one genuinely invasive
+     change; do it after 3 so the programmer already renders from stacks.
+  6. Ports + adapters, then RenderLoop short-circuit.
+  7. Attribute enum + Classifier + GDTF import - large, but purely additive
+     once FixtureValues is category-sloted.
+end note
+
+@enduml
